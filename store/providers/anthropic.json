@@ -1,0 +1,10 @@
+{
+  "_meta": {
+    "description": "Anthropic direct API provider with Claude Sonnet 4 and Haiku 4.5",
+    "tags": ["anthropic", "direct"]
+  },
+  "models": {},
+  "options": {
+    "apiKey": "{env:ANTHROPIC_API_KEY}"
+  }
+}

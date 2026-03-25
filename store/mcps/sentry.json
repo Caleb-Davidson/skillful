@@ -1,0 +1,9 @@
+{
+  "_meta": {
+    "description": "Sentry remote MCP — query issues, projects, and error data (OAuth)",
+    "tags": ["remote", "monitoring", "sentry"]
+  },
+  "type": "remote",
+  "url": "https://mcp.sentry.dev/mcp",
+  "oauth": {}
+}

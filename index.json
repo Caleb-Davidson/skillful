@@ -1,0 +1,292 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "brainstorm",
+      "type": "agent",
+      "name": "brainstorm",
+      "description": "Brainstorms ideas and explores design options without making changes",
+      "tags": [
+        "primary"
+      ],
+      "path": "agents/brainstorm.md"
+    },
+    {
+      "id": "code-reviewer",
+      "type": "agent",
+      "name": "code-reviewer",
+      "description": "Reviews code for quality, security, and best practices",
+      "tags": [
+        "subagent"
+      ],
+      "path": "agents/code-reviewer.md"
+    },
+    {
+      "id": "docs-writer",
+      "type": "agent",
+      "name": "docs-writer",
+      "description": "Writes and maintains project documentation",
+      "tags": [
+        "subagent"
+      ],
+      "path": "agents/docs-writer.md"
+    },
+    {
+      "id": "git-commit",
+      "type": "agent",
+      "name": "git-commit",
+      "description": "Generates a git commit from staged changes following Conventional Commits",
+      "tags": [
+        "subagent"
+      ],
+      "path": "agents/git-commit.md"
+    },
+    {
+      "id": "refactorer",
+      "type": "agent",
+      "name": "refactorer",
+      "description": "Refactors code for better structure, readability, and maintainability",
+      "tags": [
+        "subagent"
+      ],
+      "path": "agents/refactorer.md"
+    },
+    {
+      "id": "security-auditor",
+      "type": "agent",
+      "name": "security-auditor",
+      "description": "Performs security audits and identifies vulnerabilities",
+      "tags": [
+        "subagent"
+      ],
+      "path": "agents/security-auditor.md"
+    },
+    {
+      "id": "test-writer",
+      "type": "agent",
+      "name": "test-writer",
+      "description": "Generates and runs tests, analyzes coverage gaps",
+      "tags": [
+        "subagent"
+      ],
+      "path": "agents/test-writer.md"
+    },
+    {
+      "id": "changelog",
+      "type": "command",
+      "name": "changelog",
+      "description": "Generate a changelog from recent commits",
+      "tags": [
+        "agent:plan"
+      ],
+      "path": "commands/changelog.md"
+    },
+    {
+      "id": "check-deps",
+      "type": "command",
+      "name": "check-deps",
+      "description": "Analyze project dependencies for issues and updates",
+      "tags": [
+        "agent:plan"
+      ],
+      "path": "commands/check-deps.md"
+    },
+    {
+      "id": "explain",
+      "type": "command",
+      "name": "explain",
+      "description": "Explain how a file or module works",
+      "tags": [
+        "agent:plan"
+      ],
+      "path": "commands/explain.md"
+    },
+    {
+      "id": "fix-todos",
+      "type": "command",
+      "name": "fix-todos",
+      "description": "Find and fix TODO/FIXME comments in the codebase",
+      "tags": [
+        "agent:build"
+      ],
+      "path": "commands/fix-todos.md"
+    },
+    {
+      "id": "review-changes",
+      "type": "command",
+      "name": "review-changes",
+      "description": "Review recent git changes and suggest improvements",
+      "tags": [
+        "agent:plan"
+      ],
+      "path": "commands/review-changes.md"
+    },
+    {
+      "id": "test",
+      "type": "command",
+      "name": "test",
+      "description": "Run the test suite and fix any failures",
+      "tags": [
+        "agent:build"
+      ],
+      "path": "commands/test.md"
+    },
+    {
+      "id": "api-design",
+      "type": "skill",
+      "name": "api-design",
+      "description": "Design RESTful and GraphQL APIs with consistent conventions",
+      "tags": [
+        "license:MIT",
+        "opencode",
+        "audience:backend-developers",
+        "workflow:design"
+      ],
+      "path": "skills/api-design/SKILL.md"
+    },
+    {
+      "id": "error-handling",
+      "type": "skill",
+      "name": "error-handling",
+      "description": "Implement consistent error handling patterns across the codebase",
+      "tags": [
+        "license:MIT",
+        "opencode",
+        "audience:developers",
+        "workflow:implementation"
+      ],
+      "path": "skills/error-handling/SKILL.md"
+    },
+    {
+      "id": "git-release",
+      "type": "skill",
+      "name": "git-release",
+      "description": "Create consistent releases with changelogs and version bumps",
+      "tags": [
+        "license:MIT",
+        "opencode",
+        "audience:maintainers",
+        "workflow:github"
+      ],
+      "path": "skills/git-release/SKILL.md"
+    },
+    {
+      "id": "pr-review",
+      "type": "skill",
+      "name": "pr-review",
+      "description": "Structured pull request review with checklist and feedback",
+      "tags": [
+        "license:MIT",
+        "opencode",
+        "audience:developers",
+        "workflow:github"
+      ],
+      "path": "skills/pr-review/SKILL.md"
+    },
+    {
+      "id": "amazon-bedrock-west",
+      "type": "provider",
+      "name": "amazon-bedrock-west",
+      "description": "Amazon Bedrock provider (us-west-2) with Claude Sonnet 4",
+      "tags": [
+        "aws",
+        "bedrock",
+        "us-west-2"
+      ],
+      "path": "providers/amazon-bedrock-west.json"
+    },
+    {
+      "id": "amazon-bedrock",
+      "type": "provider",
+      "name": "amazon-bedrock",
+      "description": "Amazon Bedrock provider (us-east-1, martech profile) with Claude Haiku 4.5",
+      "tags": [
+        "aws",
+        "bedrock",
+        "us-east-1"
+      ],
+      "path": "providers/amazon-bedrock.json"
+    },
+    {
+      "id": "anthropic",
+      "type": "provider",
+      "name": "anthropic",
+      "description": "Anthropic direct API provider with Claude Sonnet 4 and Haiku 4.5",
+      "tags": [
+        "anthropic",
+        "direct"
+      ],
+      "path": "providers/anthropic.json"
+    },
+    {
+      "id": "openai",
+      "type": "provider",
+      "name": "openai",
+      "description": "OpenAI provider with API key from environment",
+      "tags": [
+        "openai",
+        "direct"
+      ],
+      "path": "providers/openai.json"
+    },
+    {
+      "id": "context7",
+      "type": "mcp",
+      "name": "context7",
+      "description": "Context7 remote MCP — search library and framework docs",
+      "tags": [
+        "remote",
+        "docs",
+        "search"
+      ],
+      "path": "mcps/context7.json"
+    },
+    {
+      "id": "filesystem",
+      "type": "mcp",
+      "name": "filesystem",
+      "description": "Filesystem MCP server — read, search, and manage local files",
+      "tags": [
+        "local",
+        "filesystem"
+      ],
+      "path": "mcps/filesystem.json"
+    },
+    {
+      "id": "gh-grep",
+      "type": "mcp",
+      "name": "gh-grep",
+      "description": "Grep by Vercel — search code snippets across GitHub repos",
+      "tags": [
+        "remote",
+        "search",
+        "github"
+      ],
+      "path": "mcps/gh-grep.json"
+    },
+    {
+      "id": "github",
+      "type": "mcp",
+      "name": "github",
+      "description": "GitHub MCP server via npx — issues, PRs, repos, and more",
+      "tags": [
+        "local",
+        "github",
+        "git"
+      ],
+      "path": "mcps/github.json"
+    },
+    {
+      "id": "sentry",
+      "type": "mcp",
+      "name": "sentry",
+      "description": "Sentry remote MCP — query issues, projects, and error data (OAuth)",
+      "tags": [
+        "remote",
+        "monitoring",
+        "sentry"
+      ],
+      "path": "mcps/sentry.json"
+    }
+  ]
+}

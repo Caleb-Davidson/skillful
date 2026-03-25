@@ -1,0 +1,15 @@
+{
+  "_meta": {
+    "description": "Amazon Bedrock provider (us-east-1, martech profile) with Claude Haiku 4.5",
+    "tags": ["aws", "bedrock", "us-east-1"]
+  },
+  "options": {
+    "region": "us-east-1",
+    "profile": "martech"
+  },
+  "models": {
+    "anthropic.claude-haiku-4-5-20251001-v1:0": {
+      "name": "Claude Haiku 4.5 (US-East-1)"
+    }
+  }
+}

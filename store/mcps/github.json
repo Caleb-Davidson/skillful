@@ -1,0 +1,11 @@
+{
+  "_meta": {
+    "description": "GitHub MCP server via npx — issues, PRs, repos, and more",
+    "tags": ["local", "github", "git"]
+  },
+  "type": "local",
+  "command": ["npx", "-y", "@modelcontextprotocol/server-github"],
+  "environment": {
+    "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_TOKEN}"
+  }
+}

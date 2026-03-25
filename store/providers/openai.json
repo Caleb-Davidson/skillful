@@ -1,0 +1,10 @@
+{
+  "_meta": {
+    "description": "OpenAI provider with API key from environment",
+    "tags": ["openai", "direct"]
+  },
+  "models": {},
+  "options": {
+    "apiKey": "{env:OPENAI_API_KEY}"
+  }
+}

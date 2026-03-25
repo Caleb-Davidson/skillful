@@ -1,0 +1,8 @@
+{
+  "_meta": {
+    "description": "Filesystem MCP server — read, search, and manage local files",
+    "tags": ["local", "filesystem"]
+  },
+  "type": "local",
+  "command": ["npx", "-y", "@modelcontextprotocol/server-filesystem", "."]
+}
