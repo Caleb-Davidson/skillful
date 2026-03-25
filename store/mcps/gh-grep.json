@@ -1,8 +1,0 @@
-{
-  "_meta": {
-    "description": "Grep by Vercel — search code snippets across GitHub repos",
-    "tags": ["remote", "search", "github"]
-  },
-  "type": "remote",
-  "url": "https://mcp.grep.app"
-}
