@@ -10,10 +10,52 @@
       "path": "commands/update-agents.md"
     },
     {
+      "id": "code-comments",
+      "type": "skill",
+      "name": "code-comments",
+      "description": "Add and maintain high-quality code documentation for public APIs and complex logic",
+      "tags": [
+        "license:MIT",
+        "opencode",
+        "audience:developers",
+        "domain:code-quality",
+        "platform:universal"
+      ],
+      "path": "skills/code-comments/SKILL.md"
+    },
+    {
+      "id": "conventional-commit",
+      "type": "skill",
+      "name": "conventional-commit",
+      "description": "Analyzes staged changes and session intent to generate and execute high-quality Conventional Commit messages",
+      "tags": [
+        "license:MIT",
+        "opencode",
+        "audience:developers",
+        "domain:git",
+        "platform:universal"
+      ],
+      "path": "skills/conventional-commit/SKILL.md"
+    },
+    {
+      "id": "create-skill",
+      "type": "skill",
+      "name": "create-skill",
+      "description": "Create new agent skills following OpenCode documentation. Use when you need to create, write, or scaffold a SKILL.md file with proper structure.",
+      "tags": [
+        "license:MIT",
+        "opencode",
+        "audience:developers",
+        "domain:opencode",
+        "platform:universal"
+      ],
+      "path": "skills/create-skill/SKILL.md"
+    },
+    {
       "id": "atlassian-mcp-server-jira",
       "type": "mcp",
       "name": "atlassian-mcp-server-jira",
-      "description": "Atlassian Jira MCP — remote MCP server for Jira and Confluence via Atlassian",
+      "description": "Atlassian Jira MCP — remote MCP server for Jira",
       "tags": [
         "remote",
         "atlassian",

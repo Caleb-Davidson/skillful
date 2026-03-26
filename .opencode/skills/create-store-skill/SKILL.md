@@ -22,8 +22,12 @@ Ask the user the following questions in a single message. Do not proceed until a
 1. **Name** — The skill identifier (lowercase alphanumeric with hyphens, e.g. `git-release`). This becomes the directory name and must match the `name` field in frontmatter.
 2. **Description** — A one-line summary of what the skill does (required, 1-1024 characters). This is shown in the TUI and used by agents to decide when to load the skill.
 3. **License** — Optional. e.g. `MIT`, `Apache-2.0`. Leave blank to omit.
-4. **Compatibility** — Optional. e.g. `opencode`. Leave blank to omit.
-5. **Metadata** — Optional key-value pairs for extra context. Common keys: `audience` (e.g. `developers`, `maintainers`), `workflow` (e.g. `github`, `ci`). Leave blank to omit.
+4. **Compatibility** — Optional. Defaults to `opencode`. Leave blank to omit.
+5. **Metadata** — Optional key-value pairs for extra context. Useful keys:
+   - `audience` (e.g. `developers`, `maintainers`)
+   - `domain` (e.g. `git`, `docker`, `opencode`)
+   - `platform` (e.g. `node`, `python`, `universal`)
+   Leave blank to omit.
 6. **Skill content** — The full markdown body. This is what gets injected into the agent's context when the skill is loaded. It should include:
    - **What I do** — bullet list of capabilities
    - **When to use me** — guidance for when this skill is appropriate
@@ -73,7 +77,8 @@ license: MIT
 compatibility: opencode
 metadata:
   audience: devops
-  workflow: ci-cd
+  domain: docker
+  platform: universal
 ---
 
 ## What I do

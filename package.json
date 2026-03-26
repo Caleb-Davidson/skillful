@@ -12,7 +12,14 @@
     "start": "node dist/cli.js",
     "index": "tsx src/build-index.ts"
   },
-  "keywords": ["opencode", "cli", "tui", "agents", "commands", "skills"],
+  "keywords": [
+    "opencode",
+    "cli",
+    "tui",
+    "agents",
+    "commands",
+    "skills"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
