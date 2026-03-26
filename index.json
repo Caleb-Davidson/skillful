@@ -72,6 +72,20 @@
       "path": "skills/create-skill/SKILL.md"
     },
     {
+      "id": "ticket-commit",
+      "type": "skill",
+      "name": "ticket-commit",
+      "description": "Analyzes staged changes and extracts a ticket ID from the branch name to generate and execute ticket-prefixed commit messages",
+      "tags": [
+        "license:MIT",
+        "opencode",
+        "audience:developers",
+        "domain:git",
+        "platform:universal"
+      ],
+      "path": "skills/ticket-commit/SKILL.md"
+    },
+    {
       "id": "atlassian-mcp-server-jira",
       "type": "mcp",
       "name": "atlassian-mcp-server-jira",

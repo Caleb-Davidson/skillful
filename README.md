@@ -14,7 +14,7 @@ This tool keeps a local "store" of those items in version control, tracks what's
 |----------|-------|--------|-----------------------|------------------------|
 | **Agents** | 2 | Markdown with frontmatter | `~/.config/opencode/agents/` | `.opencode/agents/` |
 | **Commands** | 1 | Markdown with frontmatter | `~/.config/opencode/commands/` | `.opencode/commands/` |
-| **Skills** | 3 | `SKILL.md` in named folders | `~/.config/opencode/skills/<name>/` | `.opencode/skills/<name>/` |
+| **Skills** | 4 | `SKILL.md` in named folders | `~/.config/opencode/skills/<name>/` | `.opencode/skills/<name>/` |
 | **Providers** | 0 | JSON config blocks | `provider.<id>` in `~/.config/opencode/opencode.json` | `provider.<id>` in `./opencode.json` |
 | **MCP Servers** | 2 | JSON config blocks | `mcp.<id>` in `~/.config/opencode/opencode.json` | `mcp.<id>` in `./opencode.json` |
 
@@ -32,6 +32,7 @@ This tool keeps a local "store" of those items in version control, tracks what's
 - **code-comments** — Add and maintain high-quality code documentation for public APIs and complex logic
 - **conventional-commit** — Analyzes staged changes and session intent to generate and execute high-quality Conventional Commit messages
 - **create-skill** — Create new agent skills following OpenCode documentation. Use when you need to create, write, or scaffold a SKILL.md file with proper structure.
+- **ticket-commit** — Analyzes staged changes and extracts a ticket ID from the branch name to generate and execute ticket-prefixed commit messages
 
 ### Providers
 
