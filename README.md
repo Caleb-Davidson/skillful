@@ -12,52 +12,34 @@ This tool keeps a local "store" of those items in version control, tracks what's
 
 | Category | Count | Format | Installed to |
 |----------|-------|--------|--------------|
-| **Agents** | 7 | Markdown with frontmatter | `~/.config/opencode/agents/` |
-| **Commands** | 6 | Markdown with frontmatter | `~/.config/opencode/commands/` |
-| **Skills** | 4 | `SKILL.md` in named folders | `~/.config/opencode/skills/<name>/` |
-| **Providers** | 4 | JSON config blocks | `provider.<id>` in `opencode.json` |
-| **MCP Servers** | 5 | JSON config blocks | `mcp.<id>` in `opencode.json` |
+| **Agents** | 0 | Markdown with frontmatter | `~/.config/opencode/agents/` |
+| **Commands** | 1 | Markdown with frontmatter | `~/.config/opencode/commands/` |
+| **Skills** | 3 | `SKILL.md` in named folders | `~/.config/opencode/skills/<name>/` |
+| **Providers** | 0 | JSON config blocks | `provider.<id>` in `opencode.json` |
+| **MCP Servers** | 2 | JSON config blocks | `mcp.<id>` in `opencode.json` |
 
 ### Agents
 
-- **brainstorm** — Primary agent for exploring design options without making changes
-- **code-reviewer** — Reviews code for quality, security, and best practices
-- **docs-writer** — Writes and maintains project documentation
-- **git-commit** — Generates conventional commits from staged changes
-- **refactorer** — Refactors code for better structure and readability
-- **security-auditor** — Performs security audits and identifies vulnerabilities
-- **test-writer** — Generates and runs tests, analyzes coverage gaps
+_No agents available_
 
 ### Commands
 
-- **/test** — Run the test suite and fix any failures
-- **/review-changes** — Review recent git changes and suggest improvements
-- **/explain** — Explain how a file or module works
-- **/fix-todos** — Find and fix TODO/FIXME comments in the codebase
-- **/changelog** — Generate a changelog from recent commits
-- **/check-deps** — Analyze project dependencies for issues and updates
+- **/update-agents** — Updates AGENTs.md with the current session and context.
 
 ### Skills
 
-- **git-release** — Create consistent releases with changelogs and version bumps
-- **pr-review** — Structured pull request review with checklist and feedback
-- **api-design** — Design RESTful and GraphQL APIs with consistent conventions
-- **error-handling** — Implement consistent error handling patterns
+- **code-comments** — Add and maintain high-quality code documentation for public APIs and complex logic
+- **conventional-commit** — Analyzes staged changes and session intent to generate and execute high-quality Conventional Commit messages
+- **create-skill** — Create new agent skills following OpenCode documentation. Use when you need to create, write, or scaffold a SKILL.md file with proper structure.
 
 ### Providers
 
-- **amazon-bedrock** — Bedrock us-east-1 with martech profile and Claude Haiku 4.5
-- **amazon-bedrock-west** — Bedrock us-west-2 with Claude Sonnet 4
-- **anthropic** — Anthropic direct API (key from `$ANTHROPIC_API_KEY`)
-- **openai** — OpenAI direct API (key from `$OPENAI_API_KEY`)
+_No providers available_
 
 ### MCP Servers
 
-- **context7** — Search library and framework docs (remote)
-- **sentry** — Query Sentry issues and error data via OAuth (remote)
-- **gh-grep** — Grep by Vercel — search code on GitHub (remote)
-- **github** — GitHub MCP server for issues, PRs, repos (local, via npx)
-- **filesystem** — Read, search, and manage local files (local, via npx)
+- **atlassian-mcp-server-jira** — Atlassian Jira MCP — remote MCP server for Jira
+- **github-mcp** — GitHub Copilot MCP — remote MCP server via GitHub Copilot API
 
 ## Install
 
