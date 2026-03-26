@@ -4,9 +4,12 @@ This document describes the architecture, codebase layout, and development patte
 
 ## Purpose
 
-opencode-manager is a Node.js CLI tool that maintains a local "store" of OpenCode configuration items (agents, commands, skills, providers, MCP servers), detects which ones are installed in the user's global OpenCode config, and provides a TUI to install/uninstall them.
+opencode-manager is a Node.js CLI tool that maintains a local "store" of OpenCode configuration items (agents, commands, skills, providers, MCP servers), detects which ones are installed, and provides a TUI to install/uninstall them.
 
-The tool targets the **global** OpenCode configuration at `~/.config/opencode/`. It does not modify per-project configs.
+The tool supports two modes of operation:
+
+- **Global mode**: When run outside a project directory, it targets `~/.config/opencode/` (the global OpenCode config).
+- **Project mode**: When run inside a project directory (detected by `.git` or `.opencode`), it targets the project-level config (`opencode.json` in the project root and `.opencode/` subdirectories). Global install state is shown as read-only context — adding/removing items only affects the project level.
 
 ## Technology stack
 
@@ -56,16 +59,19 @@ store/ directory
   StoreIndex { items: StoreItemMeta[] }
       │
       ▼
-  config.ts (buildStoreView) — checks each item against ~/.config/opencode/
+  cli.tsx — calls detectProjectContext() to determine global vs project mode
       │
       ▼
-  StoreView { agents, commands, skills, providers, mcps } (each with InstalledState)
+  config.ts (buildStoreView) — checks each item against the active scope
+      │                         (project config if in project, else global)
+      ▼
+  StoreView { agents, commands, skills, providers, mcps, context }
       │
       ▼
-  StoreApp.tsx — renders TUI, calls toggleItem() on Enter/Space
+  StoreApp.tsx — renders TUI, calls toggleItem(item, ctx) on Enter/Space
       │
       ▼
-  config.ts (installItem / uninstallItem) — writes to ~/.config/opencode/
+  config.ts (installItem / uninstallItem) — writes to project or global config
 ```
 
 ## Key files in detail
@@ -75,10 +81,12 @@ store/ directory
 All shared types. The important ones:
 
 - **`StoreItemType`**: Union of `"agent" | "command" | "skill" | "provider" | "mcp"`
+- **`ConfigMode`**: `"global" | "project"` — which scope the tool is operating in
+- **`ProjectContext`**: Contains `mode`, `projectDir`, and `projectName` — detected at startup
 - **`StoreItemMeta`**: The index entry for a store item — `id`, `type`, `name`, `description`, `tags`, `path`
-- **`InstalledState`**: Whether an item is installed, and via what mechanism (`"json"` or `"file"`)
+- **`InstalledState`**: Whether an item is installed, via what mechanism (`"json"` or `"file"`), and whether it's installed globally (`globalInstalled` — only set in project mode)
 - **`StoreItemWithState`**: `StoreItemMeta` + `InstalledState` — what the TUI works with
-- **`StoreView`**: The full TUI model — arrays of `StoreItemWithState` grouped by category
+- **`StoreView`**: The full TUI model — arrays of `StoreItemWithState` grouped by category, plus the `ProjectContext`
 - **`ProviderStoreFile` / `McpStoreFile`**: Shape of the JSON files in `store/providers/` and `store/mcps/`. They have a `_meta` block (description + tags for the TUI) and the rest is the raw config payload.
 
 ### `src/lib/store.ts`
@@ -97,35 +105,38 @@ Scans the `store/` directory and builds a `StoreIndex`. Each item type has its o
 
 ### `src/lib/config.ts`
 
-Manages the OpenCode global configuration at `~/.config/opencode/`. Three main responsibilities:
+Manages the OpenCode configuration at both global (`~/.config/opencode/`) and project levels. Key responsibilities:
+
+**0. Project Detection (`detectProjectContext`, `detectProjectRoot`)**
+
+Walks up from `cwd` looking for `.git` or `.opencode` directories. If found, returns `{ mode: "project", projectDir, projectName }`. The project name is resolved from the git remote URL first, then git toplevel directory name, then the directory basename. If no project marker is found, returns `{ mode: "global" }`.
 
 **1. Detection (`getInstalledState`)**
 
-For each item type, checks whether it exists in the global config:
+For each item type, checks whether it exists in the active scope's config. In project mode, also checks the global scope to set `globalInstalled` (read-only).
 
 | Type | Check JSON config | Check filesystem |
 |------|-------------------|------------------|
-| agent | `config.agent.<id>` exists | `~/.config/opencode/agents/<id>.md` exists |
-| command | `config.command.<id>` exists | `~/.config/opencode/commands/<id>.md` exists |
-| skill | — | `~/.config/opencode/skills/<id>/SKILL.md` exists |
+| agent | `config.agent.<id>` exists | `{configDir}/agents/<id>.md` exists |
+| command | `config.command.<id>` exists | `{configDir}/commands/<id>.md` exists |
+| skill | — | `{configDir}/skills/<id>/SKILL.md` exists |
 | provider | `config.provider.<id>` exists | — |
 | mcp | `config.mcp.<id>` exists | — |
 
-Returns `{ installed: true, installedVia: "json" | "file" }` or `{ installed: false }`.
+Where `{configDir}` is `~/.config/opencode/` in global mode or `<projectRoot>/.opencode/` in project mode (with `opencode.json` at the project root for JSON-based items).
+
+Returns `{ installed, installedVia, globalInstalled }`.
 
 **2. Install (`installItem`)**
 
-- **Agents, commands**: Copies the `.md` file from `store/` to `~/.config/opencode/{agents,commands}/`.
-- **Skills**: Copies `SKILL.md` to `~/.config/opencode/skills/<id>/`.
-- **Providers, MCPs**: Reads the JSON file, strips the `_meta` key, and uses `jsonc-parser`'s `modify()` + `applyEdits()` to write the payload into `opencode.json` under `provider.<id>` or `mcp.<id>`. This preserves existing formatting and comments in the config file.
+- **Global mode**: Same as before — copies files to `~/.config/opencode/` or writes JSON to global `opencode.json`.
+- **Project mode**: Copies files to `<projectRoot>/.opencode/{agents,commands,skills}/` or writes JSON to `<projectRoot>/opencode.json`.
 
 **3. Uninstall (`uninstallItem`)**
 
-Reverse of install:
-- File-based items: Deletes the file (or directory for skills).
-- JSON-based items: Uses `jsonc-parser` to remove the key. If the parent object becomes empty, removes it too.
+Reverse of install, targeting the active scope. In project mode, only removes from the project config — global state is never modified.
 
-**`buildStoreView()`** maps over all items and attaches their `InstalledState`.
+**`buildStoreView()`** maps over all items, attaches their `InstalledState` (scoped to the current context), and includes the `ProjectContext` in the returned `StoreView`.
 
 ### `src/components/StoreApp.tsx`
 
@@ -141,7 +152,7 @@ The component is stateless with respect to the store — it re-reads installed s
 
 ### `src/cli.tsx`
 
-Bootstrap: loads the index, builds the view, calls `render()` from Ink. Exits with an error if the store is empty.
+Bootstrap: detects project context via `detectProjectContext()`, loads the index, builds the view scoped to the detected context, calls `render()` from Ink. Exits with an error if the store is empty.
 
 ### `src/build-index.ts`
 
@@ -273,6 +284,10 @@ Since the global command is symlinked via `npm link`, changes to source files ta
 | `~/.config/opencode/agents/` | Global agent markdown files |
 | `~/.config/opencode/commands/` | Global command markdown files |
 | `~/.config/opencode/skills/` | Global skill directories |
+| `./opencode.json` | Project-level OpenCode config (providers, MCPs, agents, commands via JSON) |
+| `./.opencode/agents/` | Project-level agent markdown files |
+| `./.opencode/commands/` | Project-level command markdown files |
+| `./.opencode/skills/` | Project-level skill directories |
 | `./store/` | The local store this tool manages |
 | `./index.json` | Generated index of all store items |
 

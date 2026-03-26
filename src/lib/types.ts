@@ -2,6 +2,21 @@
 
 export type StoreItemType = "agent" | "command" | "skill" | "provider" | "mcp";
 
+/** Whether the manager is operating at global or project level */
+export type ConfigMode = "global" | "project";
+
+/**
+ * Detected project context when running inside a project directory.
+ * When mode is "global", projectDir and projectName are undefined.
+ */
+export interface ProjectContext {
+  mode: ConfigMode;
+  /** Absolute path to the project root (contains .git or .opencode) */
+  projectDir?: string;
+  /** Human-readable project name (from git or directory name) */
+  projectName?: string;
+}
+
 export interface StoreItemMeta {
   /** Unique identifier (filename without extension, or skill folder name) */
   id: string;
@@ -86,10 +101,12 @@ export interface McpStoreFile {
 
 /** Represents an item's install state */
 export interface InstalledState {
-  /** Whether this item is currently installed in the global config */
+  /** Whether this item is installed in the active scope (project if in project mode, global otherwise) */
   installed: boolean;
-  /** Where it's installed: 'json' means opencode.json config, 'file' means markdown file */
+  /** Where it's installed: 'json' means opencode.json config, 'file' means markdown/skill file */
   installedVia?: "json" | "file";
+  /** Whether this item is installed globally (only set when in project mode) */
+  globalInstalled?: boolean;
 }
 
 /** A store item combined with its installed state */
@@ -104,4 +121,6 @@ export interface StoreView {
   skills: StoreItemWithState[];
   providers: StoreItemWithState[];
   mcps: StoreItemWithState[];
+  /** The active project/global context */
+  context: ProjectContext;
 }

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { Box, Text, useInput, useApp } from "ink";
-import type { StoreItemWithState, StoreItemType, StoreView } from "../lib/types.js";
+import type { StoreItemWithState, StoreItemType, StoreView, ProjectContext } from "../lib/types.js";
 import { toggleItem, getInstalledState } from "../lib/config.js";
 
 interface CategoryTabProps {
@@ -27,11 +27,13 @@ function CategoryTab({ label, count, installedCount, active }: CategoryTabProps)
 interface ItemRowProps {
   item: StoreItemWithState;
   selected: boolean;
+  isProjectMode: boolean;
 }
 
-function ItemRow({ item, selected }: ItemRowProps) {
-  const icon = item.state.installed ? "✓" : "○";
-  const iconColor = item.state.installed ? "green" : "gray";
+function ItemRow({ item, selected, isProjectMode }: ItemRowProps) {
+  const isGlobalOnly = isProjectMode && !item.state.installed && item.state.globalInstalled;
+  const icon = item.state.installed ? "✓" : isGlobalOnly ? "◆" : "○";
+  const iconColor = item.state.installed ? "green" : isGlobalOnly ? "blue" : "gray";
 
   let displayName = item.name;
   if (item.type === "command") displayName = `/${item.name}`;
@@ -47,6 +49,7 @@ function ItemRow({ item, selected }: ItemRowProps) {
         <Text color={selected ? "cyan" : "white"} bold={selected}>
           {displayName}
         </Text>
+        {isGlobalOnly && <Text color="blue"> [global]</Text>}
         <Text color="gray"> — {item.description}</Text>
       </Text>
     </Box>
@@ -55,9 +58,10 @@ function ItemRow({ item, selected }: ItemRowProps) {
 
 interface DetailPanelProps {
   item: StoreItemWithState;
+  isProjectMode: boolean;
 }
 
-function DetailPanel({ item }: DetailPanelProps) {
+function DetailPanel({ item, isProjectMode }: DetailPanelProps) {
   let displayName = item.name;
   if (item.type === "command") displayName = `/${item.name}`;
 
@@ -68,6 +72,8 @@ function DetailPanel({ item }: DetailPanelProps) {
     provider: "provider",
     mcp: "mcp server",
   };
+
+  const isGlobalOnly = isProjectMode && !item.state.installed && item.state.globalInstalled;
 
   return (
     <Box
@@ -92,7 +98,12 @@ function DetailPanel({ item }: DetailPanelProps) {
         <Text color="gray">Status: </Text>
         {item.state.installed ? (
           <Text color="green">
-            Installed{item.state.installedVia ? ` (via ${item.state.installedVia})` : ""}
+            Installed{isProjectMode ? " (project)" : ""}{item.state.installedVia ? ` via ${item.state.installedVia}` : ""}
+          </Text>
+        ) : isGlobalOnly ? (
+          <Text color="blue">
+            Installed globally{" "}
+            <Text color="gray">(not in project — press Enter to add to project)</Text>
           </Text>
         ) : (
           <Text color="gray">Not installed</Text>
@@ -110,7 +121,7 @@ export interface StoreAppProps {
   initialView: StoreView;
 }
 
-type Category = keyof StoreView;
+type Category = "agents" | "commands" | "skills" | "providers" | "mcps";
 const CATEGORIES: { key: Category; label: string; type: StoreItemType }[] = [
   { key: "agents", label: "Agents", type: "agent" },
   { key: "commands", label: "Commands", type: "command" },
@@ -126,13 +137,16 @@ export default function StoreApp({ initialView }: StoreAppProps) {
   const [itemIndex, setItemIndex] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
 
+  const ctx: ProjectContext = view.context;
+  const isProjectMode = ctx.mode === "project";
+
   const currentCategory = CATEGORIES[categoryIndex];
-  const items = useMemo(() => view[currentCategory.key], [view, currentCategory.key]);
+  const items = useMemo(() => view[currentCategory.key] as StoreItemWithState[], [view, currentCategory.key]);
   const selectedItem = items.length > 0 ? items[itemIndex] : null;
 
   function refreshView() {
     const refreshCategory = (list: StoreItemWithState[]): StoreItemWithState[] =>
-      list.map((item) => ({ ...item, state: getInstalledState(item) }));
+      list.map((item) => ({ ...item, state: getInstalledState(item, ctx) }));
 
     setView({
       agents: refreshCategory(view.agents),
@@ -140,6 +154,7 @@ export default function StoreApp({ initialView }: StoreAppProps) {
       skills: refreshCategory(view.skills),
       providers: refreshCategory(view.providers),
       mcps: refreshCategory(view.mcps),
+      context: ctx,
     });
   }
 
@@ -178,11 +193,11 @@ export default function StoreApp({ initialView }: StoreAppProps) {
     // Toggle install
     if ((key.return || input === " ") && selectedItem) {
       try {
-        const nowInstalled = toggleItem(selectedItem);
+        const nowInstalled = toggleItem(selectedItem, ctx);
         setMessage(
           nowInstalled
-            ? `+ Installed ${selectedItem.name}`
-            : `- Uninstalled ${selectedItem.name}`
+            ? `+ Installed ${selectedItem.name}${isProjectMode ? " (project)" : ""}`
+            : `- Uninstalled ${selectedItem.name}${isProjectMode ? " (project)" : ""}`
         );
         refreshView();
       } catch (err) {
@@ -195,9 +210,18 @@ export default function StoreApp({ initialView }: StoreAppProps) {
   return (
     <Box flexDirection="column" paddingX={1}>
       {/* Header */}
-      <Box marginBottom={1}>
-        <Text bold color="cyan">OpenCode Manager</Text>
-        <Text color="gray"> — manage your agents, commands, skills, providers & MCPs</Text>
+      <Box flexDirection="column" marginBottom={1}>
+        <Box>
+          <Text bold color="cyan">OpenCode Manager</Text>
+          <Text color="gray"> — manage your agents, commands, skills, providers & MCPs</Text>
+        </Box>
+        {isProjectMode && (
+          <Box>
+            <Text color="yellow">Project: </Text>
+            <Text bold color="white">{ctx.projectName}</Text>
+            <Text color="gray"> ({ctx.projectDir})</Text>
+          </Box>
+        )}
       </Box>
 
       {/* Category tabs */}
@@ -206,8 +230,8 @@ export default function StoreApp({ initialView }: StoreAppProps) {
           <CategoryTab
             key={cat.key}
             label={cat.label}
-            count={view[cat.key].length}
-            installedCount={view[cat.key].filter((it) => it.state.installed).length}
+            count={(view[cat.key] as StoreItemWithState[]).length}
+            installedCount={(view[cat.key] as StoreItemWithState[]).filter((it) => it.state.installed).length}
             active={i === categoryIndex}
           />
         ))}
@@ -224,13 +248,18 @@ export default function StoreApp({ initialView }: StoreAppProps) {
           <Text color="gray">  No {currentCategory.label.toLowerCase()} in the store.</Text>
         ) : (
           items.map((item, i) => (
-            <ItemRow key={`${item.type}-${item.id}`} item={item} selected={i === itemIndex} />
+            <ItemRow
+              key={`${item.type}-${item.id}`}
+              item={item}
+              selected={i === itemIndex}
+              isProjectMode={isProjectMode}
+            />
           ))
         )}
       </Box>
 
       {/* Detail panel */}
-      {selectedItem && <DetailPanel item={selectedItem} />}
+      {selectedItem && <DetailPanel item={selectedItem} isProjectMode={isProjectMode} />}
 
       {/* Message bar */}
       {message && (
@@ -243,7 +272,14 @@ export default function StoreApp({ initialView }: StoreAppProps) {
 
       {/* Help bar */}
       <Box marginTop={1}>
-        <Text color="gray">←/→ category  ↑/↓ navigate  Enter/Space toggle  q quit</Text>
+        <Box flexDirection="column">
+          <Text color="gray">←/→ category  ↑/↓ navigate  Enter/Space toggle  q quit</Text>
+          {isProjectMode && (
+            <Text color="gray">
+              <Text color="green">✓</Text> project  <Text color="blue">◆</Text> global only  <Text color="gray">○</Text> not installed
+            </Text>
+          )}
+        </Box>
       </Box>
     </Box>
   );

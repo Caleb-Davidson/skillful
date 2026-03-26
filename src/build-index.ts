@@ -28,13 +28,13 @@ function generateReadmeSection(index: StoreIndex): string {
   const providers = index.items.filter((i) => i.type === "provider");
   const mcps = index.items.filter((i) => i.type === "mcp");
 
-  const table = `| Category | Count | Format | Installed to |
-|----------|-------|--------|--------------|
-| **Agents** | ${agents.length} | Markdown with frontmatter | \`~/.config/opencode/agents/\` |
-| **Commands** | ${commands.length} | Markdown with frontmatter | \`~/.config/opencode/commands/\` |
-| **Skills** | ${skills.length} | \`SKILL.md\` in named folders | \`~/.config/opencode/skills/<name>/\` |
-| **Providers** | ${providers.length} | JSON config blocks | \`provider.<id>\` in \`opencode.json\` |
-| **MCP Servers** | ${mcps.length} | JSON config blocks | \`mcp.<id>\` in \`opencode.json\` |`;
+  const table = `| Category | Count | Format | Installed to (global) | Installed to (project) |
+|----------|-------|--------|-----------------------|------------------------|
+| **Agents** | ${agents.length} | Markdown with frontmatter | \`~/.config/opencode/agents/\` | \`.opencode/agents/\` |
+| **Commands** | ${commands.length} | Markdown with frontmatter | \`~/.config/opencode/commands/\` | \`.opencode/commands/\` |
+| **Skills** | ${skills.length} | \`SKILL.md\` in named folders | \`~/.config/opencode/skills/<name>/\` | \`.opencode/skills/<name>/\` |
+| **Providers** | ${providers.length} | JSON config blocks | \`provider.<id>\` in \`~/.config/opencode/opencode.json\` | \`provider.<id>\` in \`./opencode.json\` |
+| **MCP Servers** | ${mcps.length} | JSON config blocks | \`mcp.<id>\` in \`~/.config/opencode/opencode.json\` | \`mcp.<id>\` in \`./opencode.json\` |`;
 
   const formatList = (items: StoreItemMeta[], prefix = "") =>
     items
