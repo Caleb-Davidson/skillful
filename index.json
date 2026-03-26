@@ -1,4 +1,38 @@
 {
   "version": 1,
-  "items": []
+  "items": [
+    {
+      "id": "update-agents",
+      "type": "command",
+      "name": "update-agents",
+      "description": "Updates AGENTs.md with the current session and context.",
+      "tags": [],
+      "path": "commands/update-agents.md"
+    },
+    {
+      "id": "atlassian-mcp-server-jira",
+      "type": "mcp",
+      "name": "atlassian-mcp-server-jira",
+      "description": "Atlassian Jira MCP — remote MCP server for Jira and Confluence via Atlassian",
+      "tags": [
+        "remote",
+        "atlassian",
+        "jira",
+        "confluence"
+      ],
+      "path": "mcps/atlassian-mcp-server-jira.json"
+    },
+    {
+      "id": "github-mcp",
+      "type": "mcp",
+      "name": "github-mcp",
+      "description": "GitHub Copilot MCP — remote MCP server via GitHub Copilot API",
+      "tags": [
+        "remote",
+        "github",
+        "copilot"
+      ],
+      "path": "mcps/github-mcp.json"
+    }
+  ]
 }

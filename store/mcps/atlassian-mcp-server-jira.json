@@ -1,0 +1,9 @@
+{
+  "_meta": {
+    "description": "Atlassian Jira MCP — remote MCP server for Jira",
+    "tags": ["remote", "atlassian", "jira", "confluence"]
+  },
+  "type": "remote",
+  "url": "https://mcp.atlassian.com/v1/sse",
+  "enabled": true
+}

@@ -1,0 +1,12 @@
+{
+  "_meta": {
+    "description": "GitHub Copilot MCP — remote MCP server via GitHub Copilot API",
+    "tags": ["remote", "github", "copilot"]
+  },
+  "type": "remote",
+  "url": "https://api.githubcopilot.com/mcp/",
+  "enabled": true,
+  "headers": {
+    "Authorization": "Bearer {env:GITHUB_PAT_TOKEN}"
+  }
+}
