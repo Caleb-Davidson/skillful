@@ -68,14 +68,13 @@ Requires **Node.js 22+**.
 git clone <repo-url> opencode-manager
 cd opencode-manager
 
-# Install dependencies
-npm install
-
-# Link the CLI globally
-npm link
+# Run setup (installs dependencies, installs tsx globally, links CLI)
+npm run setup
 ```
 
 That's it. You can now run `opencode-manager` from anywhere.
+
+The setup script works on both macOS and Windows.
 
 ## Usage
 
@@ -220,6 +219,7 @@ This regenerates `index.json`. The TUI also rebuilds the index on the fly if `in
 npm run dev       # Run the TUI via tsx (no build step)
 npm run build     # Compile TypeScript to dist/
 npm run index     # Rebuild the store index
+npm run setup     # Install deps, tsx globally, and link CLI
 ```
 
 Since `npm link` creates a symlink, code changes take effect immediately when running `opencode-manager` — no rebuild needed during development.

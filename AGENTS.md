@@ -21,7 +21,9 @@ The tool targets the **global** OpenCode configuration at `~/.config/opencode/`.
 ```
 opencode-manager/
 ├── bin/
-│   └── cli.js              # Global CLI entry point (shebang uses tsx)
+│   └── cli.js              # Global CLI entry point (spawns tsx)
+├── scripts/
+│   └── setup.js            # Setup script (npm run setup)
 ├── src/
 │   ├── cli.tsx              # App bootstrap — loads index, builds view, renders TUI
 │   ├── build-index.ts       # Script to pre-generate index.json from store/
@@ -258,6 +260,7 @@ If you need to add a new type of store item (e.g. themes, plugins):
 npm run dev       # Run the TUI directly via tsx
 npm run index     # Rebuild index.json after changing store items
 npm run build     # Compile to dist/ (for production use)
+npm run setup     # Install deps, tsx globally, and link CLI
 ```
 
 Since the global command is symlinked via `npm link`, changes to source files take effect immediately — no rebuild required.
