@@ -2,6 +2,26 @@
   "version": 1,
   "items": [
     {
+      "id": "architect",
+      "type": "agent",
+      "name": "architect",
+      "description": "Designs detailed system architectures that enable developers to implement solutions independently.",
+      "tags": [
+        "all"
+      ],
+      "path": "agents/architect.md"
+    },
+    {
+      "id": "brainstorm",
+      "type": "agent",
+      "name": "brainstorm",
+      "description": "A brainstorming partner who helps developers explore diverse options and analyze trade-offs.",
+      "tags": [
+        "all"
+      ],
+      "path": "agents/brainstorm.md"
+    },
+    {
       "id": "update-agents",
       "type": "command",
       "name": "update-agents",

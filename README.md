@@ -12,7 +12,7 @@ This tool keeps a local "store" of those items in version control, tracks what's
 
 | Category | Count | Format | Installed to |
 |----------|-------|--------|--------------|
-| **Agents** | 0 | Markdown with frontmatter | `~/.config/opencode/agents/` |
+| **Agents** | 2 | Markdown with frontmatter | `~/.config/opencode/agents/` |
 | **Commands** | 1 | Markdown with frontmatter | `~/.config/opencode/commands/` |
 | **Skills** | 3 | `SKILL.md` in named folders | `~/.config/opencode/skills/<name>/` |
 | **Providers** | 0 | JSON config blocks | `provider.<id>` in `opencode.json` |
@@ -20,7 +20,8 @@ This tool keeps a local "store" of those items in version control, tracks what's
 
 ### Agents
 
-_No agents available_
+- **architect** — Designs detailed system architectures that enable developers to implement solutions independently.
+- **brainstorm** — A brainstorming partner who helps developers explore diverse options and analyze trade-offs.
 
 ### Commands
 
