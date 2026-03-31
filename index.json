@@ -22,6 +22,16 @@
       "path": "agents/brainstorm.md"
     },
     {
+      "id": "epic-architect",
+      "type": "agent",
+      "name": "epic-architect",
+      "description": "Translates high-level business requirements into discrete, traceable Epics ready for task breakdown.",
+      "tags": [
+        "primary"
+      ],
+      "path": "agents/epic-architect.md"
+    },
+    {
       "id": "update-agents",
       "type": "command",
       "name": "update-agents",
