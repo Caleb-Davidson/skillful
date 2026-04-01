@@ -18,7 +18,12 @@ metadata:
 
 ## Your Workflow
 
-### Phase 1: Audit Existing Comments
+### Phase 1: Apply Project-Specific Standards
+Review any existing documentation for code comments or documentation in the project that was provided in context (e.g., in AGENTS.md, CONTRIBUTING.md, or similar files). If no such documentation was provided, assume there are no project-specific standards and proceed to the next phase.
+
+Apply any project-specific goals, standards, or guidelines from this documentation to all following phases. If conflicts arise between project-specific standards and the defaults in this skill, follow the project-specific standards.
+
+### Phase 2: Audit Existing Comments
 Before adding or changing anything, review all existing comments in the file:
 
 - **DELETE** comments referencing code that no longer exists
@@ -26,7 +31,7 @@ Before adding or changing anything, review all existing comments in the file:
 - **REMOVE** trivial comments (e.g., `// Class1`, `// TODO: Add summary`, `// Gets the value`)
 - **KEEP** comments that provide genuine context or explain non-obvious decisions
 
-### Phase 2: Document Public Surfaces
+### Phase 3: Document Public Surfaces
 Focus exclusively on API members that external consumers will use:
 
 **Document these:**
@@ -44,7 +49,7 @@ Focus exclusively on API members that external consumers will use:
 - Document the interface contract thoroughly
 - Use `<inheritdoc>` on implementations unless implementation adds specific behavior
 
-### Phase 3: Write Purpose-Driven Comments
+### Phase 4: Write Purpose-Driven Comments
 For each member, answer these questions in your documentation:
 
 | Member Type | Document This |
@@ -62,7 +67,7 @@ For each member, answer these questions in your documentation:
 - Generic fillers (`// The name`, `// Gets the value`)
 - Type-only descriptions (`// The user ID (int)`)
 
-### Phase 4: Inline Comments
+### Phase 5: Inline Comments
 Use sparingly and only when code cannot be made self-explanatory:
 
 - **Appropriate**: Explaining why a specific algorithm was chosen, non-obvious workarounds, complex edge case handling
