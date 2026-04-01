@@ -68,6 +68,20 @@
       "path": "skills/conventional-commit/SKILL.md"
     },
     {
+      "id": "create-command",
+      "type": "skill",
+      "name": "create-command",
+      "description": "Create new custom commands following OpenCode documentation. Use when you need to create a command markdown file that users invoke with /<command-name>.",
+      "tags": [
+        "license:MIT",
+        "opencode",
+        "audience:developers",
+        "domain:opencode",
+        "platform:universal"
+      ],
+      "path": "skills/create-command/SKILL.md"
+    },
+    {
       "id": "create-skill",
       "type": "skill",
       "name": "create-skill",
