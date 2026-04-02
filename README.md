@@ -12,7 +12,7 @@ This tool keeps a local "store" of those items in version control, tracks what's
 
 | Category | Count | Format | Installed to (global) | Installed to (project) |
 |----------|-------|--------|-----------------------|------------------------|
-| **Agents** | 3 | Markdown with frontmatter | `~/.config/opencode/agents/` | `.opencode/agents/` |
+| **Agents** | 4 | Markdown with frontmatter | `~/.config/opencode/agents/` | `.opencode/agents/` |
 | **Commands** | 1 | Markdown with frontmatter | `~/.config/opencode/commands/` | `.opencode/commands/` |
 | **Skills** | 5 | `SKILL.md` in named folders | `~/.config/opencode/skills/<name>/` | `.opencode/skills/<name>/` |
 | **Providers** | 0 | JSON config blocks | `provider.<id>` in `~/.config/opencode/opencode.json` | `provider.<id>` in `./opencode.json` |
@@ -22,7 +22,8 @@ This tool keeps a local "store" of those items in version control, tracks what's
 
 - **architect** — Designs detailed system architectures that enable developers to implement solutions independently.
 - **brainstorm** — A brainstorming partner who helps developers explore diverse options and analyze trade-offs.
-- **epic-architect** — Translates high-level business requirements into discrete, traceable Epics ready for task breakdown.
+- **epic-manager** — Translates high-level business requirements into discrete, traceable Epics ready for task breakdown.
+- **task-lead** — Breaks down approved Epics into discrete, testable Work Items.
 
 ### Commands
 

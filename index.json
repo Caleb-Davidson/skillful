@@ -22,14 +22,24 @@
       "path": "agents/brainstorm.md"
     },
     {
-      "id": "epic-architect",
+      "id": "epic-manager",
       "type": "agent",
-      "name": "epic-architect",
+      "name": "epic-manager",
       "description": "Translates high-level business requirements into discrete, traceable Epics ready for task breakdown.",
       "tags": [
         "primary"
       ],
-      "path": "agents/epic-architect.md"
+      "path": "agents/epic-manager.md"
+    },
+    {
+      "id": "task-lead",
+      "type": "agent",
+      "name": "task-lead",
+      "description": "Breaks down approved Epics into discrete, testable Work Items.",
+      "tags": [
+        "primary"
+      ],
+      "path": "agents/task-lead.md"
     },
     {
       "id": "update-agents",
