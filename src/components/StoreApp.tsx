@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { Box, Text, useInput, useApp } from "ink";
-import type { StoreItemWithState, StoreItemType, StoreView, ProjectContext } from "../lib/types.js";
-import { toggleItem, getInstalledState } from "../lib/config.js";
+import type { StoreItemWithState, StoreItemType, StoreView, ProjectContext, TargetId } from "../lib/types.js";
+import { getInstalledStateForTarget, getTargetLabel, toggleItemForTarget } from "../lib/target-manager.js";
 
 interface CategoryTabProps {
   label: string;
@@ -32,6 +32,7 @@ interface ItemRowProps {
 
 function ItemRow({ item, selected, isProjectMode }: ItemRowProps) {
   const isGlobalOnly = isProjectMode && !item.state.installed && item.state.globalInstalled;
+  const supportMode = item.state.supportMode ?? "yes";
   const icon = item.state.installed ? "✓" : isGlobalOnly ? "◆" : "○";
   const iconColor = item.state.installed ? "green" : isGlobalOnly ? "blue" : "gray";
 
@@ -49,6 +50,8 @@ function ItemRow({ item, selected, isProjectMode }: ItemRowProps) {
         <Text color={selected ? "cyan" : "white"} bold={selected}>
           {displayName}
         </Text>
+        {supportMode === "partial" && <Text color="yellow"> [partial]</Text>}
+        {supportMode === "no" && <Text color="red"> [unsupported]</Text>}
         {isGlobalOnly && <Text color="blue"> [global]</Text>}
         <Text color="gray"> — {item.description}</Text>
       </Text>
@@ -74,6 +77,9 @@ function DetailPanel({ item, isProjectMode }: DetailPanelProps) {
   };
 
   const isGlobalOnly = isProjectMode && !item.state.installed && item.state.globalInstalled;
+  const supportMode = item.state.supportMode ?? "yes";
+  const isUnsupported = supportMode === "no";
+  const isPartial = supportMode === "partial";
 
   return (
     <Box
@@ -96,7 +102,9 @@ function DetailPanel({ item, isProjectMode }: DetailPanelProps) {
       )}
       <Text>
         <Text color="gray">Status: </Text>
-        {item.state.installed ? (
+        {isUnsupported ? (
+          <Text color="red">Unsupported for target</Text>
+        ) : item.state.installed ? (
           <Text color="green">
             Installed{isProjectMode ? " (project)" : ""}{item.state.installedVia ? ` via ${item.state.installedVia}` : ""}
           </Text>
@@ -109,6 +117,13 @@ function DetailPanel({ item, isProjectMode }: DetailPanelProps) {
           <Text color="gray">Not installed</Text>
         )}
       </Text>
+      {(isPartial || item.state.supportReason) && (
+        <Text>
+          <Text color="gray">Support: </Text>
+          {isPartial ? <Text color="yellow">Partial</Text> : <Text color="gray">{supportMode}</Text>}
+          {item.state.supportReason ? <Text color="gray"> — {item.state.supportReason}</Text> : null}
+        </Text>
+      )}
       <Text>
         <Text color="gray">Store path: </Text>
         <Text dimColor>{item.path}</Text>
@@ -139,6 +154,8 @@ export default function StoreApp({ initialView }: StoreAppProps) {
 
   const ctx: ProjectContext = view.context;
   const isProjectMode = ctx.mode === "project";
+  const targetId: TargetId = view.targetId ?? "opencode";
+  const targetLabel = getTargetLabel(targetId);
 
   const currentCategory = CATEGORIES[categoryIndex];
   const items = useMemo(() => view[currentCategory.key] as StoreItemWithState[], [view, currentCategory.key]);
@@ -146,7 +163,7 @@ export default function StoreApp({ initialView }: StoreAppProps) {
 
   function refreshView() {
     const refreshCategory = (list: StoreItemWithState[]): StoreItemWithState[] =>
-      list.map((item) => ({ ...item, state: getInstalledState(item, ctx) }));
+      list.map((item) => ({ ...item, state: getInstalledStateForTarget(item, targetId, ctx) }));
 
     setView({
       agents: refreshCategory(view.agents),
@@ -155,6 +172,7 @@ export default function StoreApp({ initialView }: StoreAppProps) {
       providers: refreshCategory(view.providers),
       mcps: refreshCategory(view.mcps),
       context: ctx,
+      targetId,
     });
   }
 
@@ -193,7 +211,14 @@ export default function StoreApp({ initialView }: StoreAppProps) {
     // Toggle install
     if ((key.return || input === " ") && selectedItem) {
       try {
-        const nowInstalled = toggleItem(selectedItem, ctx);
+        const supportMode = selectedItem.state.supportMode ?? "yes";
+        if (supportMode !== "yes") {
+          const fallbackMessage = selectedItem.state.supportReason ?? "Install is not available for this target yet.";
+          setMessage(`Error: ${fallbackMessage}`);
+          return;
+        }
+
+        const nowInstalled = toggleItemForTarget(selectedItem, targetId, ctx);
         setMessage(
           nowInstalled
             ? `+ Installed ${selectedItem.name}${isProjectMode ? " (project)" : ""}`
@@ -214,6 +239,11 @@ export default function StoreApp({ initialView }: StoreAppProps) {
         <Box>
           <Text bold color="cyan">OpenCode Manager</Text>
           <Text color="gray"> — manage your agents, commands, skills, providers & MCPs</Text>
+        </Box>
+        <Box>
+          <Text color="yellow">Target: </Text>
+          <Text bold color="white">{targetLabel}</Text>
+          <Text color="gray"> ({targetId})</Text>
         </Box>
         {isProjectMode && (
           <Box>

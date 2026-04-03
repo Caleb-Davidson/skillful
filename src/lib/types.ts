@@ -2,6 +2,9 @@
 
 export type StoreItemType = "agent" | "command" | "skill" | "provider" | "mcp";
 
+export type TargetId = "opencode" | "claude-code" | "codex-cli" | "codex-app";
+export type SupportMode = "yes" | "partial" | "no";
+
 /** Whether the manager is operating at global or project level */
 export type ConfigMode = "global" | "project";
 
@@ -107,6 +110,12 @@ export interface InstalledState {
   installedVia?: "json" | "file";
   /** Whether this item is installed globally (only set when in project mode) */
   globalInstalled?: boolean;
+  /** Whether the active target supports this category */
+  supported?: boolean;
+  /** Support level for the active target/category */
+  supportMode?: SupportMode;
+  /** Optional explanation for partial/unsupported behavior */
+  supportReason?: string;
 }
 
 /** A store item combined with its installed state */
@@ -123,4 +132,6 @@ export interface StoreView {
   mcps: StoreItemWithState[];
   /** The active project/global context */
   context: ProjectContext;
+  /** Active target adapter */
+  targetId?: TargetId;
 }

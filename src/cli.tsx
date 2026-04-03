@@ -9,10 +9,20 @@
 import React from "react";
 import { render } from "ink";
 import { loadIndex } from "./lib/store.js";
-import { buildStoreView, detectProjectContext } from "./lib/config.js";
+import { detectProjectContext } from "./lib/config.js";
+import { buildStoreViewForTarget, resolveTargetId } from "./lib/target-manager.js";
+import type { TargetId } from "./lib/types.js";
 import StoreApp from "./components/StoreApp.js";
 
 function main() {
+  let targetId: TargetId = "opencode";
+  try {
+    targetId = resolveTargetId();
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : String(err));
+    process.exit(1);
+  }
+
   // Detect whether we're inside a project directory
   const ctx = detectProjectContext();
 
@@ -25,7 +35,7 @@ function main() {
   }
 
   // Build the view with installed states, scoped to the detected context
-  const view = buildStoreView(index.items, ctx);
+  const view = buildStoreViewForTarget(index.items, targetId, ctx);
 
   // Render the TUI
   render(React.createElement(StoreApp, { initialView: view }));
