@@ -16,7 +16,7 @@ This tool keeps a local "store" of those items in version control, tracks what's
 | **Commands** | 1 | Markdown with frontmatter | `~/.config/opencode/commands/` | `.opencode/commands/` |
 | **Skills** | 5 | `SKILL.md` in named folders | `~/.config/opencode/skills/<name>/` | `.opencode/skills/<name>/` |
 | **Providers** | 0 | JSON config blocks | `provider.<id>` in `~/.config/opencode/opencode.json` | `provider.<id>` in `./opencode.json` |
-| **MCP Servers** | 2 | JSON config blocks | `mcp.<id>` in `~/.config/opencode/opencode.json` | `mcp.<id>` in `./opencode.json` |
+| **MCP Servers** | 3 | JSON config blocks | `mcp.<id>` in `~/.config/opencode/opencode.json` | `mcp.<id>` in `./opencode.json` |
 
 ### Agents
 
@@ -44,6 +44,7 @@ _No providers available_
 ### MCP Servers
 
 - **atlassian-mcp-server-jira** — Atlassian Jira MCP — remote MCP server for Jira
+- **chrome-devtools** — Chrome DevTools MCP — inspect, debug, and interact with Chrome via DevTools Protocol
 - **github-mcp** — GitHub Copilot MCP — remote MCP server via GitHub Copilot API
 
 ## Install

@@ -133,6 +133,19 @@
       "path": "mcps/atlassian-mcp-server-jira.json"
     },
     {
+      "id": "chrome-devtools",
+      "type": "mcp",
+      "name": "chrome-devtools",
+      "description": "Chrome DevTools MCP — inspect, debug, and interact with Chrome via DevTools Protocol",
+      "tags": [
+        "local",
+        "chrome",
+        "browser",
+        "development"
+      ],
+      "path": "mcps/chrome-devtools.json"
+    },
+    {
       "id": "github-mcp",
       "type": "mcp",
       "name": "github-mcp",

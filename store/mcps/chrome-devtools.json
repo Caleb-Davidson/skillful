@@ -1,0 +1,8 @@
+{
+  "_meta": {
+    "description": "Chrome DevTools MCP — inspect, debug, and interact with Chrome via DevTools Protocol",
+    "tags": ["local", "chrome", "browser", "development"]
+  },
+  "type": "local",
+  "command": ["npx", "-y", "chrome-devtools-mcp@latest"]
+}
