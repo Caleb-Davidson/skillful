@@ -9,7 +9,7 @@
 import React from "react";
 import { render } from "ink";
 import { loadIndex } from "./lib/store.js";
-import { detectProjectContext } from "./lib/config.js";
+import { detectProjectContext } from "./lib/project-context.js";
 import { buildStoreViewForTarget, resolveTargetId } from "./lib/target-manager.js";
 import type { TargetId } from "./lib/types.js";
 import StoreApp from "./components/StoreApp.js";

@@ -2,119 +2,21 @@ import type {
   InstalledState,
   ProjectContext,
   StoreItemMeta,
-  StoreItemType,
   StoreItemWithState,
   StoreView,
-  SupportMode,
   TargetId,
 } from "./types.js";
-import {
-  getInstalledState as getOpenCodeInstalledState,
-  installItem as installOpenCodeItem,
-  uninstallItem as uninstallOpenCodeItem,
-} from "./config.js";
-
-type CapabilityMap = Record<StoreItemType, SupportMode>;
-
-interface TargetAdapter {
-  id: TargetId;
-  label: string;
-  capabilities: CapabilityMap;
-  getInstalledState(item: StoreItemMeta, ctx?: ProjectContext): InstalledState;
-  installItem(item: StoreItemMeta, ctx?: ProjectContext): void;
-  uninstallItem(item: StoreItemMeta, ctx?: ProjectContext): void;
-}
-
-const OPENCODE_CAPABILITIES: CapabilityMap = {
-  agent: "yes",
-  command: "yes",
-  skill: "yes",
-  provider: "yes",
-  mcp: "yes",
-};
-
-const CLAUDE_CAPABILITIES: CapabilityMap = {
-  agent: "partial",
-  command: "yes",
-  skill: "yes",
-  provider: "partial",
-  mcp: "yes",
-};
-
-const CODEX_CLI_CAPABILITIES: CapabilityMap = {
-  agent: "partial",
-  command: "partial",
-  skill: "yes",
-  provider: "yes",
-  mcp: "yes",
-};
-
-const CODEX_APP_CAPABILITIES: CapabilityMap = {
-  agent: "yes",
-  command: "partial",
-  skill: "yes",
-  provider: "partial",
-  mcp: "yes",
-};
-
-function makeNotImplementedAdapter(id: TargetId, label: string, capabilities: CapabilityMap): TargetAdapter {
-  return {
-    id,
-    label,
-    capabilities,
-    getInstalledState(item: StoreItemMeta): InstalledState {
-      const supportMode = capabilities[item.type];
-      return {
-        installed: false,
-        supported: supportMode !== "no",
-        supportMode,
-        supportReason:
-          supportMode === "no"
-            ? `${label} does not support '${item.type}' items.`
-            : `${label} adapter install detection is not implemented yet for '${item.type}'.`,
-      };
-    },
-    installItem(item: StoreItemMeta): void {
-      const supportMode = capabilities[item.type];
-      if (supportMode === "no") {
-        throw new Error(`${label} does not support '${item.type}' items.`);
-      }
-      throw new Error(`${label} adapter install is not implemented yet for '${item.type}'.`);
-    },
-    uninstallItem(item: StoreItemMeta): void {
-      const supportMode = capabilities[item.type];
-      if (supportMode === "no") {
-        throw new Error(`${label} does not support '${item.type}' items.`);
-      }
-      throw new Error(`${label} adapter uninstall is not implemented yet for '${item.type}'.`);
-    },
-  };
-}
-
-const opencodeAdapter: TargetAdapter = {
-  id: "opencode",
-  label: "OpenCode",
-  capabilities: OPENCODE_CAPABILITIES,
-  getInstalledState(item: StoreItemMeta, ctx?: ProjectContext): InstalledState {
-    return {
-      ...getOpenCodeInstalledState(item, ctx),
-      supported: true,
-      supportMode: "yes",
-    };
-  },
-  installItem(item: StoreItemMeta, ctx?: ProjectContext): void {
-    installOpenCodeItem(item, ctx);
-  },
-  uninstallItem(item: StoreItemMeta, ctx?: ProjectContext): void {
-    uninstallOpenCodeItem(item, ctx);
-  },
-};
+import type { TargetAdapter } from "./targets/shared.js";
+import { opencodeAdapter } from "./targets/opencode.js";
+import { claudeCodeAdapter } from "./targets/claude-code.js";
+import { codexCliAdapter } from "./targets/codex-cli.js";
+import { codexAppAdapter } from "./targets/codex-app.js";
 
 const adapters: Record<TargetId, TargetAdapter> = {
   opencode: opencodeAdapter,
-  "claude-code": makeNotImplementedAdapter("claude-code", "Claude Code", CLAUDE_CAPABILITIES),
-  "codex-cli": makeNotImplementedAdapter("codex-cli", "Codex CLI", CODEX_CLI_CAPABILITIES),
-  "codex-app": makeNotImplementedAdapter("codex-app", "Codex App", CODEX_APP_CAPABILITIES),
+  "claude-code": claudeCodeAdapter,
+  "codex-cli": codexCliAdapter,
+  "codex-app": codexAppAdapter,
 };
 
 export function listTargetIds(): TargetId[] {
