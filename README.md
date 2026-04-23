@@ -1,4 +1,4 @@
-# opencode-manager
+# skillful
 
 A terminal storefront for managing your [OpenCode](https://opencode.ai) setup. Browse a curated collection of agents, commands, skills, providers, and MCP servers — then install or remove them with a single keypress. Track multiple projects, set per-project defaults, and switch between them without leaving the TUI.
 
@@ -53,25 +53,25 @@ Requires **Node.js 22+**.
 
 ```bash
 # Clone the repo
-git clone <repo-url> opencode-manager
-cd opencode-manager
+git clone <repo-url> skillful
+cd skillful
 
 # Run setup (installs dependencies, compiles TypeScript, links CLI globally)
 npm run setup
 ```
 
-That's it. You can now run `opencode-manager` from anywhere.
+That's it. You can now run `skillful` from anywhere.
 
 The setup script works on both macOS and Windows.
 
 ## Usage
 
 ```bash
-opencode-manager                # Auto-detect view (based on settings)
-opencode-manager manage         # Open the store management view
-opencode-manager projects       # Open the projects view
-opencode-manager settings       # Open the settings view
-opencode-manager --target=X     # Override target adapter (opencode, claude-code, etc.)
+skillful                # Auto-detect view (based on settings)
+skillful manage         # Open the store management view
+skillful projects       # Open the projects view
+skillful settings       # Open the settings view
+skillful --target=X     # Override target adapter (opencode, claude-code, etc.)
 ```
 
 The TUI has three views, switchable at any time:
@@ -88,7 +88,7 @@ The tool automatically detects whether you're inside a project directory (by the
 
 ```
  [Store] |  Projects  |  Settings
- OpenCode Manager — Store
+ Skillful — Store
  Target: OpenCode (opencode)
  Project: my-project (/Users/you/Projects/my-project)
 
@@ -124,8 +124,8 @@ Register, remove, and switch between projects. Each project can have its own def
 
 ```
  Store  | [Projects] |  Settings
- OpenCode Manager — Projects
- Registered projects you manage with opencode-manager
+ Skillful — Projects
+ Registered projects you manage with skillful
 
  ────────────────────────────────────────────────────────────────────────
   ▸ my-project [active] [opencode] — /Users/you/Projects/my-project
@@ -155,8 +155,8 @@ Configure global defaults that persist across sessions.
 
 ```
  Store  |  Projects  | [Settings]
- OpenCode Manager — Settings
- Configure default behavior for opencode-manager
+ Skillful — Settings
+ Configure default behavior for skillful
 
  ────────────────────────────────────────────────────────────────────────
   ▸ Default Target — opencode
@@ -164,7 +164,7 @@ Configure global defaults that persist across sessions.
     Default View — auto
 
  ┌──────────────────────────────────────────────────────┐
- │ Settings file: ~/.config/opencode-manager/settings.json │
+ │ Settings file: ~/.config/skillful/settings.json │
  └──────────────────────────────────────────────────────┘
 
  ↑/↓ navigate  Enter/Space cycle value  Tab manage  p projects  q quit
@@ -212,12 +212,12 @@ Uninstalling reverses each of these — files are deleted, JSON keys are removed
 
 ## Config files
 
-opencode-manager stores its own configuration separately from OpenCode:
+skillful stores its own configuration separately from OpenCode:
 
 | File | Purpose |
 |------|---------|
-| `~/.config/opencode-manager/settings.json` | Global settings (default target, default startup view) |
-| `~/.config/opencode-manager/projects.json` | Registry of tracked projects and their per-project targets |
+| `~/.config/skillful/settings.json` | Global settings (default target, default startup view) |
+| `~/.config/skillful/projects.json` | Registry of tracked projects and their per-project targets |
 
 These are created automatically on first use.
 
@@ -320,7 +320,7 @@ npm run index     # Rebuild the store index
 npm run setup     # Install deps, compile, and link CLI globally
 ```
 
-For development, `npm run dev` uses tsx to transpile on the fly. For production use (including the global `opencode-manager` command), run `npm run build` first — `bin/cli.js` will automatically use the compiled `dist/` output for fast startup (~300ms vs ~1-2s with tsx).
+For development, `npm run dev` uses tsx to transpile on the fly. For production use (including the global `skillful` command), run `npm run build` first — `bin/cli.js` will automatically use the compiled `dist/` output for fast startup (~300ms vs ~1-2s with tsx).
 
 ## License
 

@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * opencode-manager CLI entry point.
+ * skillful CLI entry point.
  * Launches the TUI storefront for managing OpenCode agents, commands, and skills.
  *
  * Supports two startup modes via subcommands:
- *   opencode-manager              — auto-detect (default view from settings)
- *   opencode-manager manage       — jump to the store management view
- *   opencode-manager projects     — jump to the projects view
+ *   skillful              — auto-detect (default view from settings)
+ *   skillful manage       — jump to the store management view
+ *   skillful projects     — jump to the projects view
  *
  * Options:
  *   --target <id>    Target adapter (opencode, claude-code, codex-cli, codex-app)

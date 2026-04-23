@@ -140,10 +140,10 @@ export default function ProjectsView({ onSwitchToProject, onSwitchView, currentP
       {/* Header */}
       <Box flexDirection="column" marginBottom={1}>
         <Box>
-          <Text bold color="cyan">OpenCode Manager</Text>
+          <Text bold color="cyan">Skillful</Text>
           <Text color="gray"> — Projects</Text>
         </Box>
-        <Text color="gray">Registered projects you manage with opencode-manager</Text>
+        <Text color="gray">Registered projects you manage with skillful</Text>
       </Box>
 
       {/* Separator */}

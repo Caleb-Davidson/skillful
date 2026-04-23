@@ -1,6 +1,6 @@
 ---
 name: create-store-provider
-description: Guided process to create a new provider entry in the opencode-manager store
+description: Guided process to create a new provider entry in the skillful store
 compatibility: opencode
 metadata:
   audience: developers
@@ -13,7 +13,7 @@ Walk the user through creating a new OpenCode provider configuration and adding 
 
 ## When to use me
 
-Use this skill when the user wants to add a new provider config to the opencode-manager store.
+Use this skill when the user wants to add a new provider config to the skillful store.
 
 ## Background
 

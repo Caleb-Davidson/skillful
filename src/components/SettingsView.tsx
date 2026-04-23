@@ -96,10 +96,10 @@ export default function SettingsView({ onSwitchView }: SettingsViewProps) {
       {/* Header */}
       <Box flexDirection="column" marginBottom={1}>
         <Box>
-          <Text bold color="cyan">OpenCode Manager</Text>
+          <Text bold color="cyan">Skillful</Text>
           <Text color="gray"> — Settings</Text>
         </Box>
-        <Text color="gray">Configure default behavior for opencode-manager</Text>
+        <Text color="gray">Configure default behavior for skillful</Text>
       </Box>
 
       {/* Separator */}

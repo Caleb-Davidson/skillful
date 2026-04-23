@@ -1,10 +1,10 @@
 # AGENTS.md
 
-This document describes the architecture, codebase layout, and development patterns of `opencode-manager`. Read this to understand how the project works and how to maintain or extend it.
+This document describes the architecture, codebase layout, and development patterns of `skillful`. Read this to understand how the project works and how to maintain or extend it.
 
 ## Purpose
 
-opencode-manager is a Node.js CLI tool that maintains a local "store" of OpenCode configuration items (agents, commands, skills, providers, MCP servers), detects which ones are installed, and provides a TUI to install/uninstall them.
+skillful is a Node.js CLI tool that maintains a local "store" of OpenCode configuration items (agents, commands, skills, providers, MCP servers), detects which ones are installed, and provides a TUI to install/uninstall them.
 
 The tool supports two modes of operation:
 
@@ -24,10 +24,10 @@ The TUI has three views, switchable via Tab and keyboard shortcuts:
 The tool supports subcommands to specify which view to start in:
 
 ```bash
-opencode-manager              # Auto-detect (uses defaultView setting)
-opencode-manager manage       # Jump to store management view
-opencode-manager projects     # Jump to projects view
-opencode-manager settings     # Jump to settings view
+skillful              # Auto-detect (uses defaultView setting)
+skillful manage       # Jump to store management view
+skillful projects     # Jump to projects view
+skillful settings     # Jump to settings view
 ```
 
 When no subcommand is given, the `defaultView` setting controls behavior:
@@ -45,7 +45,7 @@ When no subcommand is given, the `defaultView` setting controls behavior:
 ## Project structure
 
 ```
-opencode-manager/
+skillful/
 ├── bin/
 │   └── cli.js              # Global CLI entry point (runs dist/ or falls back to tsx)
 ├── scripts/
@@ -58,8 +58,8 @@ opencode-manager/
 │   │   ├── store.ts         # Store scanner — reads store/ directory, builds index
 │   │   ├── project-context.ts # Detects project root from cwd
 │   │   ├── target-manager.ts  # Target adapter registry with lazy loading
-│   │   ├── settings.ts       # User settings persistence (~/.config/opencode-manager/settings.json)
-│   │   ├── projects.ts       # Project registry persistence (~/.config/opencode-manager/projects.json)
+│   │   ├── settings.ts       # User settings persistence (~/.config/skillful/settings.json)
+│   │   ├── projects.ts       # Project registry persistence (~/.config/skillful/projects.json)
 │   │   └── targets/
 │   │       ├── shared.ts      # TargetAdapter interface and stub factory
 │   │       ├── opencode.ts    # OpenCode adapter (delegates to opencode-store.ts)
@@ -166,14 +166,14 @@ Cache is invalidated automatically after install/uninstall operations via `inval
 
 ### `src/lib/settings.ts`
 
-User settings persistence at `~/.config/opencode-manager/settings.json`.
+User settings persistence at `~/.config/skillful/settings.json`.
 
 - **`loadSettings()`**: Returns `UserSettings` (defaultTarget, defaultView). Falls back to empty defaults.
 - **`saveSettings()`**: Writes settings to disk.
 
 ### `src/lib/projects.ts`
 
-Project registry persistence at `~/.config/opencode-manager/projects.json`.
+Project registry persistence at `~/.config/skillful/projects.json`.
 
 - **`loadRegistry()` / `saveRegistry()`**: Read/write the project list.
 - **`addProject(path)`**: Register a project. Auto-resolves the project name from git.
@@ -213,7 +213,7 @@ Projects list view. Features:
 Settings editor. Features:
 - Lists configurable settings with their current values.
 - **Enter/Space**: Cycle through available values for the selected setting.
-- Settings are persisted immediately to `~/.config/opencode-manager/settings.json`.
+- Settings are persisted immediately to `~/.config/skillful/settings.json`.
 
 ### `src/cli.tsx`
 
@@ -347,7 +347,7 @@ npm run index     # Rebuild index.json after changing store items
 npm run setup     # Install deps, compile, and link CLI globally
 ```
 
-For development, `npm run dev` uses tsx to transpile on the fly. For production use (including the global `opencode-manager` command), run `npm run build` first — `bin/cli.js` will automatically use the compiled output for fast startup (~300ms vs ~1-2s with tsx).
+For development, `npm run dev` uses tsx to transpile on the fly. For production use (including the global `skillful` command), run `npm run build` first — `bin/cli.js` will automatically use the compiled output for fast startup (~300ms vs ~1-2s with tsx).
 
 ## Important paths
 
@@ -357,8 +357,8 @@ For development, `npm run dev` uses tsx to transpile on the fly. For production 
 | `~/.config/opencode/agents/` | Global agent markdown files |
 | `~/.config/opencode/commands/` | Global command markdown files |
 | `~/.config/opencode/skills/` | Global skill directories |
-| `~/.config/opencode-manager/settings.json` | User settings (default target, default view) |
-| `~/.config/opencode-manager/projects.json` | Project registry (tracked projects and their targets) |
+| `~/.config/skillful/settings.json` | User settings (default target, default view) |
+| `~/.config/skillful/projects.json` | Project registry (tracked projects and their targets) |
 | `./opencode.json` | Project-level OpenCode config (providers, MCPs, agents, commands via JSON) |
 | `./.opencode/agents/` | Project-level agent markdown files |
 | `./.opencode/commands/` | Project-level command markdown files |
@@ -376,4 +376,4 @@ For development, `npm run dev` uses tsx to transpile on the fly. For production 
 - File-based items (agents, commands, skills) are installed by copying files. JSON-based items (providers, MCPs) are installed by merging into `opencode.json`.
 - Target adapters are lazy-loaded — only the selected adapter is imported at startup.
 - Config reads and directory listings in `opencode-store.ts` are cached per session and invalidated on install/uninstall.
-- User data (settings, project registry) lives in `~/.config/opencode-manager/`, separate from OpenCode's own config in `~/.config/opencode/`.
+- User data (settings, project registry) lives in `~/.config/skillful/`, separate from OpenCode's own config in `~/.config/opencode/`.

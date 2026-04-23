@@ -1,6 +1,6 @@
 ---
 name: create-store-skill
-description: Guided process to create a new skill entry in the opencode-manager store
+description: Guided process to create a new skill entry in the skillful store
 compatibility: opencode
 metadata:
   audience: developers
@@ -13,7 +13,7 @@ Walk the user through creating a new OpenCode agent skill and adding it to the `
 
 ## When to use me
 
-Use this skill when the user wants to add a new skill to the opencode-manager store.
+Use this skill when the user wants to add a new skill to the skillful store.
 
 ## Process
 

@@ -1,6 +1,6 @@
 ---
 name: create-store-mcp
-description: Guided process to create a new MCP server entry in the opencode-manager store
+description: Guided process to create a new MCP server entry in the skillful store
 compatibility: opencode
 metadata:
   audience: developers
@@ -13,7 +13,7 @@ Walk the user through creating a new OpenCode MCP server configuration and addin
 
 ## When to use me
 
-Use this skill when the user wants to add a new MCP server to the opencode-manager store.
+Use this skill when the user wants to add a new MCP server to the skillful store.
 
 ## Background
 

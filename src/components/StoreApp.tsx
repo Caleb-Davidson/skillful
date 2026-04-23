@@ -254,7 +254,7 @@ function ManageView({ view, onViewChanged, onSwitchView }: ManageViewProps) {
       {/* Header */}
       <Box flexDirection="column" marginBottom={1}>
         <Box>
-          <Text bold color="cyan">OpenCode Manager</Text>
+          <Text bold color="cyan">Skillful</Text>
           <Text color="gray"> — Store</Text>
         </Box>
         <Box>

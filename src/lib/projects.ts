@@ -1,6 +1,6 @@
 /**
  * Project registry persistence.
- * Stored at ~/.config/opencode-manager/projects.json
+ * Stored at ~/.config/skillful/projects.json
  *
  * Tracks which projects the user has registered, their names,
  * and optional per-project default targets.
@@ -11,7 +11,7 @@ import os from "node:os";
 import { execSync } from "node:child_process";
 import type { ProjectEntry, ProjectRegistry, TargetId } from "./types.js";
 
-const CONFIG_DIR = path.join(os.homedir(), ".config", "opencode-manager");
+const CONFIG_DIR = path.join(os.homedir(), ".config", "skillful");
 const REGISTRY_PATH = path.join(CONFIG_DIR, "projects.json");
 
 function ensureConfigDir(): void {

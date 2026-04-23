@@ -22,6 +22,6 @@ function run(command, args, label) {
 
 run("npm", ["install"], "Installing dependencies");
 run("npm", ["run", "build"], "Compiling TypeScript to dist/");
-run("npm", ["link"], "Creating global symlink for opencode-manager");
+run("npm", ["link"], "Creating global symlink for skillful");
 
-console.log("\n✓ Setup complete! You can now run 'opencode-manager' from anywhere.\n");
+console.log("\n✓ Setup complete! You can now run 'skillful' from anywhere.\n");

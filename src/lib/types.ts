@@ -1,4 +1,4 @@
-// Types for the opencode-manager store
+// Types for the skillful store
 
 export type StoreItemType = "agent" | "command" | "skill" | "provider" | "mcp";
 
@@ -153,12 +153,12 @@ export interface ProjectEntry {
   addedAt: string;
 }
 
-/** The project registry stored in ~/.config/opencode-manager/projects.json */
+/** The project registry stored in ~/.config/skillful/projects.json */
 export interface ProjectRegistry {
   projects: ProjectEntry[];
 }
 
-/** User settings stored in ~/.config/opencode-manager/settings.json */
+/** User settings stored in ~/.config/skillful/settings.json */
 export interface UserSettings {
   /** Default target adapter to use when --target is not specified */
   defaultTarget?: TargetId;
