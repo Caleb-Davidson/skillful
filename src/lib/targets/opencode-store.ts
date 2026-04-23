@@ -13,6 +13,21 @@ import { getStorePath } from "../store.js";
 
 const FORMAT_OPTS = { formattingOptions: { insertSpaces: true, tabSize: 2 } };
 
+// ── Per-session cache to avoid repeated filesystem reads during buildStoreView ──
+// Call invalidateCache() after any install/uninstall to ensure fresh data.
+let _globalConfigCache: Record<string, unknown> | null = null;
+let _projectConfigCache: { key: string; data: Record<string, unknown> } | null = null;
+let _globalFilesCache: { agents: string[]; commands: string[]; skills: string[] } | null = null;
+let _projectFilesCache: { key: string; agents: string[]; commands: string[]; skills: string[] } | null = null;
+
+/** Invalidate all caches. Call after install/uninstall operations. */
+export function invalidateCache(): void {
+  _globalConfigCache = null;
+  _projectConfigCache = null;
+  _globalFilesCache = null;
+  _projectFilesCache = null;
+}
+
 /** OpenCode global config directory */
 export function getGlobalConfigDir(): string {
   return path.join(os.homedir(), ".config", "opencode");
@@ -23,16 +38,22 @@ export function getGlobalConfigPath(): string {
   return path.join(getGlobalConfigDir(), "opencode.json");
 }
 
-/** Read and parse the global opencode.json (JSONC) */
+/** Read and parse the global opencode.json (JSONC) — cached per session */
 export function readGlobalConfig(): Record<string, unknown> {
+  if (_globalConfigCache !== null) return _globalConfigCache;
   const configPath = getGlobalConfigPath();
-  if (!fs.existsSync(configPath)) return {};
+  if (!fs.existsSync(configPath)) {
+    _globalConfigCache = {};
+    return _globalConfigCache;
+  }
   const raw = fs.readFileSync(configPath, "utf-8");
   try {
-    return parseJsonc(raw) ?? {};
+    const parsed = (parseJsonc(raw) as Record<string, unknown> | null) ?? {};
+    _globalConfigCache = parsed;
   } catch {
-    return {};
+    _globalConfigCache = {};
   }
+  return _globalConfigCache!;
 }
 
 /** Read the raw text of global opencode.json */
@@ -62,16 +83,24 @@ function getProjectDotDir(ctx: ProjectContext): string {
   return path.join(ctx.projectDir!, ".opencode");
 }
 
-/** Read and parse the project opencode.json (JSONC) */
+/** Read and parse the project opencode.json (JSONC) — cached per session */
 function readProjectConfig(ctx: ProjectContext): Record<string, unknown> {
+  const cacheKey = ctx.projectDir!;
+  if (_projectConfigCache !== null && _projectConfigCache.key === cacheKey) {
+    return _projectConfigCache.data;
+  }
   const configPath = getProjectConfigPath(ctx);
-  if (!fs.existsSync(configPath)) return {};
+  if (!fs.existsSync(configPath)) {
+    _projectConfigCache = { key: cacheKey, data: {} };
+    return _projectConfigCache.data;
+  }
   const raw = fs.readFileSync(configPath, "utf-8");
   try {
-    return parseJsonc(raw) ?? {};
+    _projectConfigCache = { key: cacheKey, data: parseJsonc(raw) ?? {} };
   } catch {
-    return {};
+    _projectConfigCache = { key: cacheKey, data: {} };
   }
+  return _projectConfigCache.data;
 }
 
 /** Read raw text of project opencode.json */
@@ -87,48 +116,63 @@ function writeProjectConfig(ctx: ProjectContext, content: string): void {
   fs.writeFileSync(configPath, content, "utf-8");
 }
 
-function listGlobalAgentFiles(): string[] {
-  const dir = path.join(getGlobalConfigDir(), "agents");
-  if (!fs.existsSync(dir)) return [];
-  return fs.readdirSync(dir).filter((f: string) => f.endsWith(".md")).map((f: string) => path.basename(f, ".md"));
+/** Cached global file listings */
+function getGlobalFiles(): { agents: string[]; commands: string[]; skills: string[] } {
+  if (_globalFilesCache !== null) return _globalFilesCache;
+
+  const configDir = getGlobalConfigDir();
+
+  const agentsDir = path.join(configDir, "agents");
+  const agents = fs.existsSync(agentsDir)
+    ? fs.readdirSync(agentsDir).filter((f: string) => f.endsWith(".md")).map((f: string) => path.basename(f, ".md"))
+    : [];
+
+  const commandsDir = path.join(configDir, "commands");
+  const commands = fs.existsSync(commandsDir)
+    ? fs.readdirSync(commandsDir).filter((f: string) => f.endsWith(".md")).map((f: string) => path.basename(f, ".md"))
+    : [];
+
+  const skillsDir = path.join(configDir, "skills");
+  const skills = fs.existsSync(skillsDir)
+    ? fs.readdirSync(skillsDir, { withFileTypes: true })
+        .filter((d: fs.Dirent) => d.isDirectory())
+        .filter((d: fs.Dirent) => fs.existsSync(path.join(skillsDir, d.name, "SKILL.md")))
+        .map((d: fs.Dirent) => d.name)
+    : [];
+
+  _globalFilesCache = { agents, commands, skills };
+  return _globalFilesCache;
 }
 
-function listGlobalCommandFiles(): string[] {
-  const dir = path.join(getGlobalConfigDir(), "commands");
-  if (!fs.existsSync(dir)) return [];
-  return fs.readdirSync(dir).filter((f: string) => f.endsWith(".md")).map((f: string) => path.basename(f, ".md"));
-}
+/** Cached project file listings */
+function getProjectFiles(ctx: ProjectContext): { agents: string[]; commands: string[]; skills: string[] } {
+  const cacheKey = ctx.projectDir!;
+  if (_projectFilesCache !== null && _projectFilesCache.key === cacheKey) {
+    return _projectFilesCache;
+  }
 
-function listGlobalSkillFolders(): string[] {
-  const dir = path.join(getGlobalConfigDir(), "skills");
-  if (!fs.existsSync(dir)) return [];
-  return fs
-    .readdirSync(dir, { withFileTypes: true })
-    .filter((d: fs.Dirent) => d.isDirectory())
-    .filter((d: fs.Dirent) => fs.existsSync(path.join(dir, d.name, "SKILL.md")))
-    .map((d: fs.Dirent) => d.name);
-}
+  const dotDir = getProjectDotDir(ctx);
 
-function listProjectAgentFiles(ctx: ProjectContext): string[] {
-  const dir = path.join(getProjectDotDir(ctx), "agents");
-  if (!fs.existsSync(dir)) return [];
-  return fs.readdirSync(dir).filter((f: string) => f.endsWith(".md")).map((f: string) => path.basename(f, ".md"));
-}
+  const agentsDir = path.join(dotDir, "agents");
+  const agents = fs.existsSync(agentsDir)
+    ? fs.readdirSync(agentsDir).filter((f: string) => f.endsWith(".md")).map((f: string) => path.basename(f, ".md"))
+    : [];
 
-function listProjectCommandFiles(ctx: ProjectContext): string[] {
-  const dir = path.join(getProjectDotDir(ctx), "commands");
-  if (!fs.existsSync(dir)) return [];
-  return fs.readdirSync(dir).filter((f: string) => f.endsWith(".md")).map((f: string) => path.basename(f, ".md"));
-}
+  const commandsDir = path.join(dotDir, "commands");
+  const commands = fs.existsSync(commandsDir)
+    ? fs.readdirSync(commandsDir).filter((f: string) => f.endsWith(".md")).map((f: string) => path.basename(f, ".md"))
+    : [];
 
-function listProjectSkillFolders(ctx: ProjectContext): string[] {
-  const dir = path.join(getProjectDotDir(ctx), "skills");
-  if (!fs.existsSync(dir)) return [];
-  return fs
-    .readdirSync(dir, { withFileTypes: true })
-    .filter((d: fs.Dirent) => d.isDirectory())
-    .filter((d: fs.Dirent) => fs.existsSync(path.join(dir, d.name, "SKILL.md")))
-    .map((d: fs.Dirent) => d.name);
+  const skillsDir = path.join(dotDir, "skills");
+  const skills = fs.existsSync(skillsDir)
+    ? fs.readdirSync(skillsDir, { withFileTypes: true })
+        .filter((d: fs.Dirent) => d.isDirectory())
+        .filter((d: fs.Dirent) => fs.existsSync(path.join(skillsDir, d.name, "SKILL.md")))
+        .map((d: fs.Dirent) => d.name)
+    : [];
+
+  _projectFilesCache = { key: cacheKey, agents, commands, skills };
+  return _projectFilesCache;
 }
 
 /** Read a store JSON file and return the config payload (without _meta) */
@@ -144,13 +188,14 @@ function readStoreJsonPayload(item: StoreItemMeta): Record<string, unknown> {
 /** Check if a store item is installed in the global config */
 function getGlobalInstalledState(item: StoreItemMeta): InstalledState {
   const config = readGlobalConfig();
+  const files = getGlobalFiles();
 
   if (item.type === "agent") {
     const agents = config.agent as Record<string, unknown> | undefined;
     if (agents && item.id in agents) {
       return { installed: true, installedVia: "json" };
     }
-    if (listGlobalAgentFiles().includes(item.id)) {
+    if (files.agents.includes(item.id)) {
       return { installed: true, installedVia: "file" };
     }
   }
@@ -160,13 +205,13 @@ function getGlobalInstalledState(item: StoreItemMeta): InstalledState {
     if (commands && item.id in commands) {
       return { installed: true, installedVia: "json" };
     }
-    if (listGlobalCommandFiles().includes(item.id)) {
+    if (files.commands.includes(item.id)) {
       return { installed: true, installedVia: "file" };
     }
   }
 
   if (item.type === "skill") {
-    if (listGlobalSkillFolders().includes(item.id)) {
+    if (files.skills.includes(item.id)) {
       return { installed: true, installedVia: "file" };
     }
   }
@@ -191,13 +236,14 @@ function getGlobalInstalledState(item: StoreItemMeta): InstalledState {
 /** Check if a store item is installed at the project level */
 function getProjectInstalledState(item: StoreItemMeta, ctx: ProjectContext): InstalledState {
   const config = readProjectConfig(ctx);
+  const files = getProjectFiles(ctx);
 
   if (item.type === "agent") {
     const agents = config.agent as Record<string, unknown> | undefined;
     if (agents && item.id in agents) {
       return { installed: true, installedVia: "json" };
     }
-    if (listProjectAgentFiles(ctx).includes(item.id)) {
+    if (files.agents.includes(item.id)) {
       return { installed: true, installedVia: "file" };
     }
   }
@@ -207,13 +253,13 @@ function getProjectInstalledState(item: StoreItemMeta, ctx: ProjectContext): Ins
     if (commands && item.id in commands) {
       return { installed: true, installedVia: "json" };
     }
-    if (listProjectCommandFiles(ctx).includes(item.id)) {
+    if (files.commands.includes(item.id)) {
       return { installed: true, installedVia: "file" };
     }
   }
 
   if (item.type === "skill") {
-    if (listProjectSkillFolders(ctx).includes(item.id)) {
+    if (files.skills.includes(item.id)) {
       return { installed: true, installedVia: "file" };
     }
   }
@@ -272,6 +318,8 @@ export function installItem(item: StoreItemMeta, ctx?: ProjectContext): void {
   } else {
     installItemProject(item, ctx, srcPath);
   }
+
+  invalidateCache();
 }
 
 function installItemGlobal(item: StoreItemMeta, srcPath: string): void {
@@ -335,6 +383,8 @@ export function uninstallItem(item: StoreItemMeta, ctx?: ProjectContext): void {
   } else {
     uninstallItemProject(item, ctx);
   }
+
+  invalidateCache();
 }
 
 function uninstallItemGlobal(item: StoreItemMeta): void {

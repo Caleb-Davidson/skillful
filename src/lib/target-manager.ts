@@ -7,20 +7,51 @@ import type {
   TargetId,
 } from "./types.js";
 import type { TargetAdapter } from "./targets/shared.js";
-import { opencodeAdapter } from "./targets/opencode.js";
-import { claudeCodeAdapter } from "./targets/claude-code.js";
-import { codexCliAdapter } from "./targets/codex-cli.js";
-import { codexAppAdapter } from "./targets/codex-app.js";
 
-const adapters: Record<TargetId, TargetAdapter> = {
-  opencode: opencodeAdapter,
-  "claude-code": claudeCodeAdapter,
-  "codex-cli": codexCliAdapter,
-  "codex-app": codexAppAdapter,
-};
+const VALID_TARGETS: TargetId[] = ["opencode", "claude-code", "codex-cli", "codex-app"];
+
+// Lazy-loaded adapter cache — only the selected adapter is imported.
+let _cachedAdapter: { id: TargetId; adapter: TargetAdapter } | null = null;
+
+async function loadAdapter(id: TargetId): Promise<TargetAdapter> {
+  switch (id) {
+    case "opencode": {
+      const { opencodeAdapter } = await import("./targets/opencode.js");
+      return opencodeAdapter;
+    }
+    case "claude-code": {
+      const { claudeCodeAdapter } = await import("./targets/claude-code.js");
+      return claudeCodeAdapter;
+    }
+    case "codex-cli": {
+      const { codexCliAdapter } = await import("./targets/codex-cli.js");
+      return codexCliAdapter;
+    }
+    case "codex-app": {
+      const { codexAppAdapter } = await import("./targets/codex-app.js");
+      return codexAppAdapter;
+    }
+  }
+}
+
+/** Get the adapter for the given target, loading it lazily if needed. */
+function getAdapter(id: TargetId): TargetAdapter {
+  if (_cachedAdapter && _cachedAdapter.id === id) return _cachedAdapter.adapter;
+  // Synchronous path: for the initial startup, we preload via initAdapter().
+  // This fallback should not normally be hit.
+  throw new Error(`Adapter '${id}' not loaded. Call initAdapter() first.`);
+}
+
+/** Pre-load the adapter for the given target. Call once at startup. */
+export async function initAdapter(id: TargetId): Promise<TargetAdapter> {
+  if (_cachedAdapter && _cachedAdapter.id === id) return _cachedAdapter.adapter;
+  const adapter = await loadAdapter(id);
+  _cachedAdapter = { id, adapter };
+  return adapter;
+}
 
 export function listTargetIds(): TargetId[] {
-  return Object.keys(adapters) as TargetId[];
+  return [...VALID_TARGETS];
 }
 
 export function resolveTargetId(argv: string[] = process.argv.slice(2)): TargetId {
@@ -46,28 +77,28 @@ export function resolveTargetId(argv: string[] = process.argv.slice(2)): TargetI
   }
 
   if (!rawTarget) {
-    const valid = listTargetIds().join(", ");
+    const valid = VALID_TARGETS.join(", ");
     throw new Error(`Missing value for --target. Valid targets: ${valid}`);
   }
 
-  if (rawTarget in adapters) {
+  if (VALID_TARGETS.includes(rawTarget as TargetId)) {
     return rawTarget as TargetId;
   }
 
-  const valid = listTargetIds().join(", ");
+  const valid = VALID_TARGETS.join(", ");
   throw new Error(`Invalid --target value '${rawTarget}'. Valid targets: ${valid}`);
 }
 
 export function getTargetLabel(targetId: TargetId): string {
-  return adapters[targetId].label;
+  return getAdapter(targetId).label;
 }
 
 export function getInstalledStateForTarget(item: StoreItemMeta, targetId: TargetId, ctx?: ProjectContext): InstalledState {
-  return adapters[targetId].getInstalledState(item, ctx);
+  return getAdapter(targetId).getInstalledState(item, ctx);
 }
 
 export function toggleItemForTarget(item: StoreItemMeta, targetId: TargetId, ctx?: ProjectContext): boolean {
-  const adapter = adapters[targetId];
+  const adapter = getAdapter(targetId);
   const state = adapter.getInstalledState(item, ctx);
   if (state.installed) {
     adapter.uninstallItem(item, ctx);

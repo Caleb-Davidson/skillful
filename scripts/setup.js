@@ -21,7 +21,7 @@ function run(command, args, label) {
 }
 
 run("npm", ["install"], "Installing dependencies");
-run("npm", ["install", "-g", "tsx"], "Installing tsx globally");
+run("npm", ["run", "build"], "Compiling TypeScript to dist/");
 run("npm", ["link"], "Creating global symlink for opencode-manager");
 
 console.log("\n✓ Setup complete! You can now run 'opencode-manager' from anywhere.\n");

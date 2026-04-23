@@ -135,3 +135,33 @@ export interface StoreView {
   /** Active target adapter */
   targetId?: TargetId;
 }
+
+// ── Multi-view app types ──
+
+/** Top-level views in the TUI */
+export type AppView = "manage" | "projects" | "settings";
+
+/** A registered project in the project registry */
+export interface ProjectEntry {
+  /** Absolute path to the project root */
+  path: string;
+  /** Human-readable name (from git or directory) */
+  name: string;
+  /** Per-project default target override (null = use global default) */
+  defaultTarget?: TargetId;
+  /** When the project was registered */
+  addedAt: string;
+}
+
+/** The project registry stored in ~/.config/opencode-manager/projects.json */
+export interface ProjectRegistry {
+  projects: ProjectEntry[];
+}
+
+/** User settings stored in ~/.config/opencode-manager/settings.json */
+export interface UserSettings {
+  /** Default target adapter to use when --target is not specified */
+  defaultTarget?: TargetId;
+  /** Which view to open on startup: manage, projects, or auto (detect from cwd) */
+  defaultView?: AppView | "auto";
+}

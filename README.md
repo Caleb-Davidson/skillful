@@ -1,12 +1,12 @@
 # opencode-manager
 
-A terminal storefront for managing your [OpenCode](https://opencode.ai) setup. Browse a curated collection of agents, commands, skills, providers, and MCP servers — then install or remove them with a single keypress. Works at both the global and project level.
+A terminal storefront for managing your [OpenCode](https://opencode.ai) setup. Browse a curated collection of agents, commands, skills, providers, and MCP servers — then install or remove them with a single keypress. Track multiple projects, set per-project defaults, and switch between them without leaving the TUI.
 
 ## Why
 
 OpenCode supports a rich ecosystem of customizations — custom agents, slash commands, reusable skills, provider configs, and MCP server integrations — but managing them means editing JSON files and copying markdown into the right directories by hand.
 
-This tool keeps a local "store" of those items in version control, tracks what's installed, and gives you a TUI to toggle them on and off — at either the global or project level.
+This tool keeps a local "store" of those items in version control, tracks what's installed, and gives you a TUI to toggle them on and off — at either the global or project level. It also maintains a registry of your projects so you can quickly switch between them and keep per-project configuration.
 
 ## What's in the store
 
@@ -56,7 +56,7 @@ Requires **Node.js 22+**.
 git clone <repo-url> opencode-manager
 cd opencode-manager
 
-# Run setup (installs dependencies, installs tsx globally, links CLI)
+# Run setup (installs dependencies, compiles TypeScript, links CLI globally)
 npm run setup
 ```
 
@@ -67,58 +67,46 @@ The setup script works on both macOS and Windows.
 ## Usage
 
 ```bash
-opencode-manager
+opencode-manager                # Auto-detect view (based on settings)
+opencode-manager manage         # Open the store management view
+opencode-manager projects       # Open the projects view
+opencode-manager settings       # Open the settings view
+opencode-manager --target=X     # Override target adapter (opencode, claude-code, etc.)
 ```
+
+The TUI has three views, switchable at any time:
+
+| View | Purpose | Switch to |
+|------|---------|-----------|
+| **Store** | Browse and install/uninstall store items | Tab from Projects, Tab from Settings |
+| **Projects** | Manage registered projects | Tab from Store, `p` from Settings |
+| **Settings** | Configure defaults (target, startup view) | `s` from Store, `s` from Projects |
+
+### Store view (manage)
 
 The tool automatically detects whether you're inside a project directory (by the presence of `.git` or `.opencode`). If so, it runs in **project mode** — installs go to your project config. Otherwise, it runs in **global mode** — installs go to `~/.config/opencode/`.
 
-### Global mode
-
-When run outside a project directory, the TUI looks like this:
-
 ```
- OpenCode Manager — manage your agents, commands, skills, providers & MCPs
+ [Store] |  Projects  |  Settings
+ OpenCode Manager — Store
+ Target: OpenCode (opencode)
+ Project: my-project (/Users/you/Projects/my-project)
 
-  ▸ Agents(2/7)   Commands(0/6)   Skills(0/4)   Providers(1/4)   MCPs(0/5)
+  ▸ Agents(1/4)   Commands(0/1)   Skills(0/5)   Providers(0/0)   MCPs(0/3)
  ────────────────────────────────────────────────────────────────────────
   ▸ ✓ brainstorm — Brainstorms ideas and explores design options...
-    ○ code-reviewer — Reviews code for quality, security, and best practices
-    ○ docs-writer — Writes and maintains project documentation
+    ◆ architect [global] — Designs detailed system architectures...
+    ○ epic-manager — Translates high-level business requirements...
     ...
 
  ┌──────────────────────────────────────────────────────┐
  │ brainstorm (agent)                                    │
  │ Brainstorms ideas and explores design options...      │
  │ Tags: primary                                         │
- │ Status: Installed via file                            │
+ │ Status: Installed (project) via file                  │
  └──────────────────────────────────────────────────────┘
 
- ←/→ category  ↑/↓ navigate  Enter/Space toggle  q quit
-```
-
-### Project mode
-
-When run inside a project directory, the TUI shows the project name and distinguishes between project and global installs:
-
-```
- OpenCode Manager — manage your agents, commands, skills, providers & MCPs
- Project: my-project (/Users/you/Projects/my-project)
-
-  ▸ Agents(1/7)   Commands(0/6)   Skills(0/4)   Providers(0/4)   MCPs(0/5)
- ────────────────────────────────────────────────────────────────────────
-  ▸ ✓ brainstorm — Brainstorms ideas and explores design options...
-    ◆ architect [global] — Designs detailed system architectures...
-    ○ code-reviewer — Reviews code for quality, security, and best practices
-    ...
-
- ┌──────────────────────────────────────────────────────┐
- │ architect (agent)                                      │
- │ Designs detailed system architectures...               │
- │ Tags: subagent                                         │
- │ Status: Installed globally (not in project)            │
- └──────────────────────────────────────────────────────┘
-
- ←/→ category  ↑/↓ navigate  Enter/Space toggle  q quit
+ ←/→ category  ↑/↓ navigate  Enter/Space toggle  Tab projects  s settings  q quit
  ✓ project  ◆ global only  ○ not installed
 ```
 
@@ -130,16 +118,79 @@ In project mode:
 
 Pressing Enter/Space on a globally installed item adds it to the project config. Removing it from the project reveals the global state again. Global installs are never modified from project mode.
 
-### Controls
+### Projects view
+
+Register, remove, and switch between projects. Each project can have its own default target adapter.
+
+```
+ Store  | [Projects] |  Settings
+ OpenCode Manager — Projects
+ Registered projects you manage with opencode-manager
+
+ ────────────────────────────────────────────────────────────────────────
+  ▸ my-project [active] [opencode] — /Users/you/Projects/my-project
+    other-project — /Users/you/Projects/other-project
+    api-service [claude-code] — /Users/you/Projects/api-service
+
+ ┌──────────────────────────────────────────────────────┐
+ │ my-project                                            │
+ │ Path: /Users/you/Projects/my-project                  │
+ │ Target: opencode                                      │
+ │ Added: 4/23/2026                                      │
+ └──────────────────────────────────────────────────────┘
+
+ ↑/↓ navigate  Enter open project  a add  d remove  t cycle target  Tab manage  s settings  q quit
+```
 
 | Key | Action |
 |-----|--------|
-| `←` / `→` | Switch between categories |
-| `↑` / `↓` | Navigate items in the current category |
-| `Enter` or `Space` | Install or uninstall the selected item |
-| `q` | Quit |
+| `a` | Add a project (type the directory path) |
+| `d` | Remove the selected project from the registry |
+| `t` | Cycle the default target for the selected project |
+| `Enter` | Switch to that project's store view |
 
-Each category tab shows `(installed/total)` so you can see at a glance what's active.
+### Settings view
+
+Configure global defaults that persist across sessions.
+
+```
+ Store  |  Projects  | [Settings]
+ OpenCode Manager — Settings
+ Configure default behavior for opencode-manager
+
+ ────────────────────────────────────────────────────────────────────────
+  ▸ Default Target — opencode
+      Target adapter used when --target is not specified
+    Default View — auto
+
+ ┌──────────────────────────────────────────────────────┐
+ │ Settings file: ~/.config/opencode-manager/settings.json │
+ └──────────────────────────────────────────────────────┘
+
+ ↑/↓ navigate  Enter/Space cycle value  Tab manage  p projects  q quit
+```
+
+Available settings:
+
+| Setting | Values | Description |
+|---------|--------|-------------|
+| **Default Target** | `opencode`, `claude-code`, `codex-cli`, `codex-app` | Which target adapter to use when `--target` is not specified |
+| **Default View** | `auto`, `manage`, `projects`, `settings` | Which view to show on startup. `auto` opens manage if inside a project, projects otherwise |
+
+### Controls summary
+
+| Key | Store view | Projects view | Settings view |
+|-----|------------|---------------|---------------|
+| `←` / `→` | Switch categories | — | — |
+| `↑` / `↓` | Navigate items | Navigate projects | Navigate settings |
+| `Enter` / `Space` | Toggle install | Open project | Cycle value |
+| `Tab` | Go to Projects | Go to Store | Go to Store |
+| `s` | Go to Settings | Go to Settings | — |
+| `p` | — | — | Go to Projects |
+| `a` | — | Add project | — |
+| `d` | — | Remove project | — |
+| `t` | — | Cycle target | — |
+| `q` | Quit | Quit | Quit |
 
 ### What happens when you install
 
@@ -158,6 +209,17 @@ In **project mode** (inside a project with `.git` or `.opencode`):
 - **MCP servers** — The JSON block (minus `_meta`) is written into `mcp` in the project's `opencode.json`.
 
 Uninstalling reverses each of these — files are deleted, JSON keys are removed. In project mode, only the project config is affected; global installs are never modified.
+
+## Config files
+
+opencode-manager stores its own configuration separately from OpenCode:
+
+| File | Purpose |
+|------|---------|
+| `~/.config/opencode-manager/settings.json` | Global settings (default target, default startup view) |
+| `~/.config/opencode-manager/projects.json` | Registry of tracked projects and their per-project targets |
+
+These are created automatically on first use.
 
 ## Adding items to the store
 
@@ -251,13 +313,14 @@ This regenerates `index.json`. The TUI also rebuilds the index on the fly if `in
 ## Development
 
 ```bash
-npm run dev       # Run the TUI via tsx (no build step)
-npm run build     # Compile TypeScript to dist/
+npm run dev       # Run the TUI via tsx (no build step needed)
+npm run build     # Compile TypeScript to dist/ (for fast production startup)
+npm run start     # Run the compiled dist/cli.js directly
 npm run index     # Rebuild the store index
-npm run setup     # Install deps, tsx globally, and link CLI
+npm run setup     # Install deps, compile, and link CLI globally
 ```
 
-Since `npm link` creates a symlink, code changes take effect immediately when running `opencode-manager` — no rebuild needed during development.
+For development, `npm run dev` uses tsx to transpile on the fly. For production use (including the global `opencode-manager` command), run `npm run build` first — `bin/cli.js` will automatically use the compiled `dist/` output for fast startup (~300ms vs ~1-2s with tsx).
 
 ## License
 

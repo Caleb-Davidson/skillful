@@ -1,7 +1,14 @@
 import React, { useState, useMemo } from "react";
 import { Box, Text, useInput, useApp } from "ink";
-import type { StoreItemWithState, StoreItemType, StoreView, ProjectContext, TargetId } from "../lib/types.js";
-import { getInstalledStateForTarget, getTargetLabel, toggleItemForTarget } from "../lib/target-manager.js";
+import type { StoreItemWithState, StoreItemType, StoreView, ProjectContext, TargetId, AppView } from "../lib/types.js";
+import { getInstalledStateForTarget, getTargetLabel, toggleItemForTarget, buildStoreViewForTarget, initAdapter } from "../lib/target-manager.js";
+import { loadIndex } from "../lib/store.js";
+import { detectProjectContext } from "../lib/project-context.js";
+import { addProject } from "../lib/projects.js";
+import ProjectsView from "./ProjectsView.js";
+import SettingsView from "./SettingsView.js";
+
+// ── Sub-components for the Manage (store) view ──
 
 interface CategoryTabProps {
   label: string;
@@ -132,8 +139,12 @@ function DetailPanel({ item, isProjectMode }: DetailPanelProps) {
   );
 }
 
-export interface StoreAppProps {
-  initialView: StoreView;
+// ── Manage View (the original store browsing UI) ──
+
+interface ManageViewProps {
+  view: StoreView;
+  onViewChanged: (view: StoreView) => void;
+  onSwitchView: (view: AppView) => void;
 }
 
 type Category = "agents" | "commands" | "skills" | "providers" | "mcps";
@@ -145,9 +156,7 @@ const CATEGORIES: { key: Category; label: string; type: StoreItemType }[] = [
   { key: "mcps", label: "MCPs", type: "mcp" },
 ];
 
-export default function StoreApp({ initialView }: StoreAppProps) {
-  const { exit } = useApp();
-  const [view, setView] = useState<StoreView>(initialView);
+function ManageView({ view, onViewChanged, onSwitchView }: ManageViewProps) {
   const [categoryIndex, setCategoryIndex] = useState(0);
   const [itemIndex, setItemIndex] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
@@ -165,7 +174,7 @@ export default function StoreApp({ initialView }: StoreAppProps) {
     const refreshCategory = (list: StoreItemWithState[]): StoreItemWithState[] =>
       list.map((item) => ({ ...item, state: getInstalledStateForTarget(item, targetId, ctx) }));
 
-    setView({
+    const updated: StoreView = {
       agents: refreshCategory(view.agents),
       commands: refreshCategory(view.commands),
       skills: refreshCategory(view.skills),
@@ -173,15 +182,11 @@ export default function StoreApp({ initialView }: StoreAppProps) {
       mcps: refreshCategory(view.mcps),
       context: ctx,
       targetId,
-    });
+    };
+    onViewChanged(updated);
   }
 
   useInput((input, key) => {
-    if (input === "q" || (key.ctrl && input === "c")) {
-      exit();
-      return;
-    }
-
     // Category navigation
     if (key.leftArrow || (key.shift && key.tab)) {
       setCategoryIndex((prev) => (prev - 1 + CATEGORIES.length) % CATEGORIES.length);
@@ -189,7 +194,7 @@ export default function StoreApp({ initialView }: StoreAppProps) {
       setMessage(null);
       return;
     }
-    if (key.rightArrow || key.tab) {
+    if (key.rightArrow) {
       setCategoryIndex((prev) => (prev + 1) % CATEGORIES.length);
       setItemIndex(0);
       setMessage(null);
@@ -230,6 +235,18 @@ export default function StoreApp({ initialView }: StoreAppProps) {
       }
       return;
     }
+
+    // Tab = switch to projects view
+    if (key.tab) {
+      onSwitchView("projects");
+      return;
+    }
+
+    // 's' = switch to settings
+    if (input === "s") {
+      onSwitchView("settings");
+      return;
+    }
   });
 
   return (
@@ -238,7 +255,7 @@ export default function StoreApp({ initialView }: StoreAppProps) {
       <Box flexDirection="column" marginBottom={1}>
         <Box>
           <Text bold color="cyan">OpenCode Manager</Text>
-          <Text color="gray"> — manage your agents, commands, skills, providers & MCPs</Text>
+          <Text color="gray"> — Store</Text>
         </Box>
         <Box>
           <Text color="yellow">Target: </Text>
@@ -303,7 +320,7 @@ export default function StoreApp({ initialView }: StoreAppProps) {
       {/* Help bar */}
       <Box marginTop={1}>
         <Box flexDirection="column">
-          <Text color="gray">←/→ category  ↑/↓ navigate  Enter/Space toggle  q quit</Text>
+          <Text color="gray">←/→ category  ↑/↓ navigate  Enter/Space toggle  Tab projects  s settings  q quit</Text>
           {isProjectMode && (
             <Text color="gray">
               <Text color="green">✓</Text> project  <Text color="blue">◆</Text> global only  <Text color="gray">○</Text> not installed
@@ -311,6 +328,94 @@ export default function StoreApp({ initialView }: StoreAppProps) {
           )}
         </Box>
       </Box>
+    </Box>
+  );
+}
+
+// ── Top-level App Shell ──
+
+export interface StoreAppProps {
+  initialView: StoreView;
+  initialAppView?: AppView;
+}
+
+export default function StoreApp({ initialView, initialAppView = "manage" }: StoreAppProps) {
+  const { exit } = useApp();
+  const [appView, setAppView] = useState<AppView>(initialAppView);
+  const [storeView, setStoreView] = useState<StoreView>(initialView);
+
+  // Global quit handler
+  useInput((input, key) => {
+    if (input === "q" || (key.ctrl && input === "c")) {
+      exit();
+    }
+  });
+
+  function handleSwitchToProject(projectPath: string, projectTarget?: TargetId) {
+    // Build a new store view for the selected project
+    const targetId = projectTarget ?? storeView.targetId ?? "opencode";
+
+    // Re-detect project context for the selected path
+    const ctx: ProjectContext = {
+      mode: "project",
+      projectDir: projectPath,
+      projectName: projectPath.split("/").pop() ?? projectPath,
+    };
+
+    // Auto-register the project if switching to it
+    addProject(projectPath);
+
+    const index = loadIndex();
+    const view = buildStoreViewForTarget(index.items, targetId, ctx);
+    setStoreView(view);
+    setAppView("manage");
+  }
+
+  function handleSwitchView(view: AppView) {
+    setAppView(view);
+  }
+
+  // View-level navigation tabs indicator
+  const viewTabs = (
+    <Box marginBottom={0}>
+      <Text>
+        <Text bold={appView === "manage"} color={appView === "manage" ? "cyan" : "gray"}>
+          {appView === "manage" ? "[Store]" : " Store "}
+        </Text>
+        <Text color="gray"> | </Text>
+        <Text bold={appView === "projects"} color={appView === "projects" ? "cyan" : "gray"}>
+          {appView === "projects" ? "[Projects]" : " Projects "}
+        </Text>
+        <Text color="gray"> | </Text>
+        <Text bold={appView === "settings"} color={appView === "settings" ? "cyan" : "gray"}>
+          {appView === "settings" ? "[Settings]" : " Settings "}
+        </Text>
+      </Text>
+    </Box>
+  );
+
+  return (
+    <Box flexDirection="column">
+      {viewTabs}
+      {appView === "manage" && (
+        <ManageView
+          view={storeView}
+          onViewChanged={setStoreView}
+          onSwitchView={handleSwitchView}
+        />
+      )}
+      {appView === "projects" && (
+        <ProjectsView
+          onSwitchToProject={handleSwitchToProject}
+          onSwitchView={handleSwitchView}
+          currentProjectPath={storeView.context.projectDir}
+        />
+      )}
+      {appView === "settings" && (
+        <SettingsView
+          onSwitchView={handleSwitchView}
+        />
+      )}
     </Box>
   );
 }

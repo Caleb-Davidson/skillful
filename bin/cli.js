@@ -1,21 +1,28 @@
 #!/usr/bin/env node
-import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import process from "node:process";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const cliTsx = join(__dirname, "../src/cli.tsx");
+const distCli = join(__dirname, "../dist/cli.js");
+const srcCli = join(__dirname, "../src/cli.tsx");
 
-// Use npx on all platforms, but let spawnSync use shell on Windows
-// to correctly resolve npx.cmd
-const result = spawnSync("npx", ["--no-install", "tsx", cliTsx, ...process.argv.slice(2)], {
-  stdio: "inherit",
-  shell: process.platform === "win32",
-});
+// Prefer the pre-compiled dist/ version for fast startup.
+// Fall back to tsx (dev mode) only when dist/ doesn't exist.
+if (existsSync(distCli)) {
+  await import(resolve(distCli));
+} else {
+  // Dev fallback — transpile on the fly via tsx
+  const { spawnSync } = await import("node:child_process");
+  const result = spawnSync("npx", ["--no-install", "tsx", srcCli, ...process.argv.slice(2)], {
+    stdio: "inherit",
+    shell: process.platform === "win32",
+  });
 
-if (result.error) {
-  console.error(result.error);
+  if (result.error) {
+    console.error(result.error);
+  }
+
+  process.exit(result.status ?? 1);
 }
-
-process.exit(result.status ?? 1);
