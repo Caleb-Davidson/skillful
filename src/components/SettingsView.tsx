@@ -78,15 +78,9 @@ export default function SettingsView({ onSwitchView }: SettingsViewProps) {
       return;
     }
 
-    // Tab = switch to manage view
+    // Tab = cycle to next view (settings → manage → projects → settings)
     if (key.tab) {
       onSwitchView("manage");
-      return;
-    }
-
-    // 'p' = switch to projects
-    if (input === "p") {
-      onSwitchView("projects");
       return;
     }
   });
@@ -159,7 +153,7 @@ export default function SettingsView({ onSwitchView }: SettingsViewProps) {
       {/* Help bar */}
       <Box marginTop={1}>
         <Text color="gray">
-          ↑/↓ navigate  Enter/Space cycle value  Tab manage  p projects  q quit
+          ↑/↓ navigate  Enter/Space cycle value  Tab next view  q quit
         </Text>
       </Box>
     </Box>

@@ -99,14 +99,8 @@ export default function ProjectsView({ onSwitchToProject, onSwitchView, currentP
       return;
     }
 
-    // Tab = switch to manage view
+    // Tab = cycle to next view (projects → settings → manage → projects)
     if (key.tab) {
-      onSwitchView("manage");
-      return;
-    }
-
-    // 's' = switch to settings
-    if (input === "s") {
       onSwitchView("settings");
       return;
     }
@@ -238,7 +232,7 @@ export default function ProjectsView({ onSwitchToProject, onSwitchView, currentP
       <Box marginTop={1}>
         <Box flexDirection="column">
           <Text color="gray">
-            ↑/↓ navigate  Enter open project  a add  d remove  t cycle target  Tab manage  s settings  q quit
+            ↑/↓ navigate  Enter open project  a add  d remove  t cycle target  Tab next view  q quit
           </Text>
         </Box>
       </Box>

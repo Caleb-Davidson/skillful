@@ -236,17 +236,13 @@ function ManageView({ view, onViewChanged, onSwitchView }: ManageViewProps) {
       return;
     }
 
-    // Tab = switch to projects view
+    // Tab = cycle to next view (manage → projects → settings → manage)
     if (key.tab) {
       onSwitchView("projects");
       return;
     }
-
-    // 's' = switch to settings
-    if (input === "s") {
-      onSwitchView("settings");
-      return;
-    }
+    // Shift+Tab = cycle to previous view
+    // (handled above in category nav as Shift+Tab, so won't reach here)
   });
 
   return (
@@ -254,7 +250,7 @@ function ManageView({ view, onViewChanged, onSwitchView }: ManageViewProps) {
       {/* Header */}
       <Box flexDirection="column" marginBottom={1}>
         <Box>
-          <Text bold color="cyan">Skillful</Text>
+          <Text bold color="cyan">OpenCode Manager</Text>
           <Text color="gray"> — Store</Text>
         </Box>
         <Box>
@@ -320,7 +316,7 @@ function ManageView({ view, onViewChanged, onSwitchView }: ManageViewProps) {
       {/* Help bar */}
       <Box marginTop={1}>
         <Box flexDirection="column">
-          <Text color="gray">←/→ category  ↑/↓ navigate  Enter/Space toggle  Tab projects  s settings  q quit</Text>
+          <Text color="gray">←/→ category  ↑/↓ navigate  Enter/Space toggle  Tab next view  q quit</Text>
           {isProjectMode && (
             <Text color="gray">
               <Text color="green">✓</Text> project  <Text color="blue">◆</Text> global only  <Text color="gray">○</Text> not installed
