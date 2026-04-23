@@ -1,6 +1,7 @@
 import type { InstalledState, ProjectContext, StoreItemMeta } from "../types.js";
 import {
   getInstalledState as getOpenCodeInstalledState,
+  getMismatchState as getOpenCodeMismatchState,
   installItem as installOpenCodeItem,
   uninstallItem as uninstallOpenCodeItem,
 } from "./opencode-store.js";
@@ -24,6 +25,9 @@ export const opencodeAdapter: TargetAdapter = {
       supported: true,
       supportMode: "yes",
     };
+  },
+  async getMismatchState(item: StoreItemMeta, ctx?: ProjectContext): Promise<Pick<InstalledState, "mismatch" | "mismatchChecked">> {
+    return getOpenCodeMismatchState(item, ctx);
   },
   installItem(item: StoreItemMeta, ctx?: ProjectContext): void {
     installOpenCodeItem(item, ctx);

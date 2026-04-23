@@ -6,6 +6,11 @@ import type { ProjectContext } from "./types.js";
 
 const PROJECT_MARKERS = [".git", ".opencode", ".claude", ".codex"];
 
+/** True when a directory itself has project markers (no parent lookup). */
+export function isProjectDirectory(dir: string): boolean {
+  return PROJECT_MARKERS.some((marker) => fs.existsSync(path.join(dir, marker)));
+}
+
 /**
  * Detect whether cwd is inside a project directory.
  * A project is detected if the current directory (or an ancestor up to the
@@ -23,7 +28,7 @@ export function detectProjectRoot(startDir?: string): string | null {
       break;
     }
 
-    if (PROJECT_MARKERS.some((marker) => fs.existsSync(path.join(dir, marker)))) {
+    if (isProjectDirectory(dir)) {
       return dir;
     }
     const parent = path.dirname(dir);
@@ -74,5 +79,19 @@ export function detectProjectContext(): ProjectContext {
     mode: "project",
     projectDir,
     projectName: resolveProjectName(projectDir),
+  };
+}
+
+/** Build project context only if the exact directory is a project root. */
+export function detectExactProjectContext(startDir?: string): ProjectContext {
+  const dir = startDir ?? process.cwd();
+  if (!isProjectDirectory(dir)) {
+    return { mode: "global" };
+  }
+
+  return {
+    mode: "project",
+    projectDir: dir,
+    projectName: resolveProjectName(dir),
   };
 }

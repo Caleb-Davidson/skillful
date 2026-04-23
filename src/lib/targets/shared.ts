@@ -7,6 +7,7 @@ export interface TargetAdapter {
   label: string;
   capabilities: CapabilityMap;
   getInstalledState(item: StoreItemMeta, ctx?: ProjectContext): InstalledState;
+  getMismatchState?(item: StoreItemMeta, ctx?: ProjectContext): Promise<Pick<InstalledState, "mismatch" | "mismatchChecked">>;
   installItem(item: StoreItemMeta, ctx?: ProjectContext): void;
   uninstallItem(item: StoreItemMeta, ctx?: ProjectContext): void;
 }

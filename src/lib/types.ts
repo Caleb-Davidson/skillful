@@ -33,6 +33,8 @@ export interface StoreItemMeta {
   tags: string[];
   /** Relative path within the store */
   path: string;
+  /** Build-time hash of normalized store content */
+  storeHash?: string;
 }
 
 export interface StoreIndex {
@@ -116,6 +118,10 @@ export interface InstalledState {
   supportMode?: SupportMode;
   /** Optional explanation for partial/unsupported behavior */
   supportReason?: string;
+  /** Whether installed content differs from the store item */
+  mismatch?: boolean;
+  /** Whether mismatch detection has completed */
+  mismatchChecked?: boolean;
 }
 
 /** A store item combined with its installed state */

@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import matter from "gray-matter";
 import { parse as parseJsonc } from "jsonc-parser";
+import { hashCanonicalJson, hashNormalizedText } from "./hash.js";
 import type {
   StoreIndex,
   StoreItemMeta,
@@ -52,6 +53,7 @@ function scanAgents(storePath: string): StoreItemMeta[] {
       description: data.description ?? `Agent: ${id}`,
       tags: [data.mode ?? "subagent", ...(data.model ? [data.model.split("/")[0]] : [])],
       path: `agents/${file}`,
+      storeHash: hashNormalizedText(raw),
     });
   }
   return results;
@@ -76,6 +78,7 @@ function scanCommands(storePath: string): StoreItemMeta[] {
       description: data.description ?? `Command: /${id}`,
       tags: [...(data.agent ? [`agent:${data.agent}`] : [])],
       path: `commands/${file}`,
+      storeHash: hashNormalizedText(raw),
     });
   }
   return results;
@@ -110,6 +113,7 @@ function scanSkills(storePath: string): StoreItemMeta[] {
           : []),
       ],
       path: `skills/${entry.name}/SKILL.md`,
+      storeHash: hashNormalizedText(raw),
     });
   }
   return results;
@@ -129,6 +133,7 @@ function scanProviders(storePath: string): StoreItemMeta[] {
       const id = path.basename(file, ".json");
       const meta = data._meta;
       if (!meta?.description) continue;
+      const { _meta: _, ...payload } = data;
       results.push({
         id,
         type: "provider" as StoreItemType,
@@ -136,6 +141,7 @@ function scanProviders(storePath: string): StoreItemMeta[] {
         description: meta.description,
         tags: meta.tags ?? [],
         path: `providers/${file}`,
+        storeHash: hashCanonicalJson(payload),
       });
     } catch {
       // Skip malformed JSON
@@ -158,6 +164,7 @@ function scanMcps(storePath: string): StoreItemMeta[] {
       const id = path.basename(file, ".json");
       const meta = data._meta;
       if (!meta?.description) continue;
+      const { _meta: _, ...payload } = data;
       results.push({
         id,
         type: "mcp" as StoreItemType,
@@ -165,6 +172,7 @@ function scanMcps(storePath: string): StoreItemMeta[] {
         description: meta.description,
         tags: meta.tags ?? [],
         path: `mcps/${file}`,
+        storeHash: hashCanonicalJson(payload),
       });
     } catch {
       // Skip malformed JSON
@@ -182,14 +190,17 @@ export function buildIndex(): StoreIndex {
     ...scanProviders(storePath),
     ...scanMcps(storePath),
   ];
-  return { version: 1, items };
+  return { version: 2, items };
 }
 
 export function loadIndex(): StoreIndex {
   const indexPath = path.join(getProjectRoot(), "index.json");
   if (fs.existsSync(indexPath)) {
     const raw = fs.readFileSync(indexPath, "utf-8");
-    return JSON.parse(raw) as StoreIndex;
+    const parsed = JSON.parse(raw) as StoreIndex;
+    if (parsed.version >= 2 && parsed.items.every((item) => typeof item.storeHash === "string" && item.storeHash.length > 0)) {
+      return parsed;
+    }
   }
   return buildIndex();
 }

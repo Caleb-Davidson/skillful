@@ -97,16 +97,101 @@ export function getInstalledStateForTarget(item: StoreItemMeta, targetId: Target
   return getAdapter(targetId).getInstalledState(item, ctx);
 }
 
+export function installItemForTarget(item: StoreItemMeta, targetId: TargetId, ctx?: ProjectContext): void {
+  getAdapter(targetId).installItem(item, ctx);
+}
+
 export function toggleItemForTarget(item: StoreItemMeta, targetId: TargetId, ctx?: ProjectContext): boolean {
   const adapter = getAdapter(targetId);
+  const hintedMismatch =
+    "state" in item &&
+    typeof item.state === "object" &&
+    item.state !== null &&
+    "mismatch" in item.state &&
+    (item.state as { mismatch?: boolean }).mismatch === true;
   const state = adapter.getInstalledState(item, ctx);
-  if (state.installed) {
+  const isMismatch = hintedMismatch || state.mismatch === true;
+
+  if (state.installed && !isMismatch) {
     adapter.uninstallItem(item, ctx);
     return false;
   }
 
   adapter.installItem(item, ctx);
   return true;
+}
+
+async function enrichCategoryMismatch(
+  items: StoreItemWithState[],
+  adapter: TargetAdapter,
+  ctx: ProjectContext
+): Promise<{ items: StoreItemWithState[]; changed: boolean }> {
+  let changed = false;
+
+  const enriched = await Promise.all(
+    items.map(async (item) => {
+      if (!item.state.installed || item.state.mismatchChecked === true) {
+        return item;
+      }
+
+      const fallback = { mismatch: false, mismatchChecked: true } as const;
+
+      try {
+        const mismatch = adapter.getMismatchState ? await adapter.getMismatchState(item, ctx) : fallback;
+        const nextState: InstalledState = {
+          ...item.state,
+          mismatch: mismatch.mismatch ?? false,
+          mismatchChecked: mismatch.mismatchChecked ?? true,
+        };
+
+        if (nextState.mismatch !== item.state.mismatch || nextState.mismatchChecked !== item.state.mismatchChecked) {
+          changed = true;
+          return { ...item, state: nextState };
+        }
+
+        return item;
+      } catch {
+        const nextState: InstalledState = {
+          ...item.state,
+          mismatch: false,
+          mismatchChecked: true,
+        };
+        if (nextState.mismatchChecked !== item.state.mismatchChecked || nextState.mismatch !== item.state.mismatch) {
+          changed = true;
+          return { ...item, state: nextState };
+        }
+        return item;
+      }
+    })
+  );
+
+  return { items: enriched, changed };
+}
+
+export async function enrichStoreViewMismatchForTarget(view: StoreView, targetId: TargetId): Promise<StoreView> {
+  const adapter = getAdapter(targetId);
+  const context: ProjectContext = view.context ?? { mode: "global" };
+
+  const [agents, commands, skills, providers, mcps] = await Promise.all([
+    enrichCategoryMismatch(view.agents, adapter, context),
+    enrichCategoryMismatch(view.commands, adapter, context),
+    enrichCategoryMismatch(view.skills, adapter, context),
+    enrichCategoryMismatch(view.providers, adapter, context),
+    enrichCategoryMismatch(view.mcps, adapter, context),
+  ]);
+
+  if (!agents.changed && !commands.changed && !skills.changed && !providers.changed && !mcps.changed) {
+    return view;
+  }
+
+  return {
+    ...view,
+    agents: agents.items,
+    commands: commands.items,
+    skills: skills.items,
+    providers: providers.items,
+    mcps: mcps.items,
+  };
 }
 
 export function buildStoreViewForTarget(items: StoreItemMeta[], targetId: TargetId, ctx?: ProjectContext): StoreView {

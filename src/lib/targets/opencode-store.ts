@@ -10,6 +10,7 @@ import os from "node:os";
 import { parse as parseJsonc, modify, applyEdits } from "jsonc-parser";
 import type { StoreItemMeta, InstalledState, ProjectContext } from "../types.js";
 import { getStorePath } from "../store.js";
+import { hashCanonicalJson, hashNormalizedText } from "../hash.js";
 
 const FORMAT_OPTS = { formattingOptions: { insertSpaces: true, tabSize: 2 } };
 
@@ -81,6 +82,21 @@ function getProjectConfigPath(ctx: ProjectContext): string {
 /** The .opencode directory inside the project root */
 function getProjectDotDir(ctx: ProjectContext): string {
   return path.join(ctx.projectDir!, ".opencode");
+}
+
+function getFileInstallPath(item: StoreItemMeta, ctx?: ProjectContext): string | null {
+  const baseDir = !ctx || ctx.mode === "global" ? getGlobalConfigDir() : getProjectDotDir(ctx);
+  if (item.type === "agent") return path.join(baseDir, "agents", `${item.id}.md`);
+  if (item.type === "command") return path.join(baseDir, "commands", `${item.id}.md`);
+  if (item.type === "skill") return path.join(baseDir, "skills", item.id, "SKILL.md");
+  return null;
+}
+
+function getInstalledJsonPayload(item: StoreItemMeta, ctx?: ProjectContext): unknown {
+  const config = !ctx || ctx.mode === "global" ? readGlobalConfig() : readProjectConfig(ctx);
+  const configKey = getConfigKey(item.type);
+  const section = config[configKey] as Record<string, unknown> | undefined;
+  return section?.[item.id];
 }
 
 /** Read and parse the project opencode.json (JSONC) — cached per session */
@@ -193,40 +209,40 @@ function getGlobalInstalledState(item: StoreItemMeta): InstalledState {
   if (item.type === "agent") {
     const agents = config.agent as Record<string, unknown> | undefined;
     if (agents && item.id in agents) {
-      return { installed: true, installedVia: "json" };
+      return { installed: true, installedVia: "json", mismatchChecked: false };
     }
     if (files.agents.includes(item.id)) {
-      return { installed: true, installedVia: "file" };
+      return { installed: true, installedVia: "file", mismatchChecked: false };
     }
   }
 
   if (item.type === "command") {
     const commands = config.command as Record<string, unknown> | undefined;
     if (commands && item.id in commands) {
-      return { installed: true, installedVia: "json" };
+      return { installed: true, installedVia: "json", mismatchChecked: false };
     }
     if (files.commands.includes(item.id)) {
-      return { installed: true, installedVia: "file" };
+      return { installed: true, installedVia: "file", mismatchChecked: false };
     }
   }
 
   if (item.type === "skill") {
     if (files.skills.includes(item.id)) {
-      return { installed: true, installedVia: "file" };
+      return { installed: true, installedVia: "file", mismatchChecked: false };
     }
   }
 
   if (item.type === "provider") {
     const providers = config.provider as Record<string, unknown> | undefined;
     if (providers && item.id in providers) {
-      return { installed: true, installedVia: "json" };
+      return { installed: true, installedVia: "json", mismatchChecked: false };
     }
   }
 
   if (item.type === "mcp") {
     const mcps = config.mcp as Record<string, unknown> | undefined;
     if (mcps && item.id in mcps) {
-      return { installed: true, installedVia: "json" };
+      return { installed: true, installedVia: "json", mismatchChecked: false };
     }
   }
 
@@ -241,40 +257,40 @@ function getProjectInstalledState(item: StoreItemMeta, ctx: ProjectContext): Ins
   if (item.type === "agent") {
     const agents = config.agent as Record<string, unknown> | undefined;
     if (agents && item.id in agents) {
-      return { installed: true, installedVia: "json" };
+      return { installed: true, installedVia: "json", mismatchChecked: false };
     }
     if (files.agents.includes(item.id)) {
-      return { installed: true, installedVia: "file" };
+      return { installed: true, installedVia: "file", mismatchChecked: false };
     }
   }
 
   if (item.type === "command") {
     const commands = config.command as Record<string, unknown> | undefined;
     if (commands && item.id in commands) {
-      return { installed: true, installedVia: "json" };
+      return { installed: true, installedVia: "json", mismatchChecked: false };
     }
     if (files.commands.includes(item.id)) {
-      return { installed: true, installedVia: "file" };
+      return { installed: true, installedVia: "file", mismatchChecked: false };
     }
   }
 
   if (item.type === "skill") {
     if (files.skills.includes(item.id)) {
-      return { installed: true, installedVia: "file" };
+      return { installed: true, installedVia: "file", mismatchChecked: false };
     }
   }
 
   if (item.type === "provider") {
     const providers = config.provider as Record<string, unknown> | undefined;
     if (providers && item.id in providers) {
-      return { installed: true, installedVia: "json" };
+      return { installed: true, installedVia: "json", mismatchChecked: false };
     }
   }
 
   if (item.type === "mcp") {
     const mcps = config.mcp as Record<string, unknown> | undefined;
     if (mcps && item.id in mcps) {
-      return { installed: true, installedVia: "json" };
+      return { installed: true, installedVia: "json", mismatchChecked: false };
     }
   }
 
@@ -302,6 +318,52 @@ export function getInstalledState(item: StoreItemMeta, ctx?: ProjectContext): In
     installed: false,
     globalInstalled: globalState.installed,
   };
+}
+
+export async function getMismatchState(
+  item: StoreItemMeta,
+  ctx?: ProjectContext
+): Promise<Pick<InstalledState, "mismatch" | "mismatchChecked">> {
+  if (!item.storeHash) {
+    return { mismatch: false, mismatchChecked: true };
+  }
+
+  const state = !ctx || ctx.mode === "global" ? getGlobalInstalledState(item) : getProjectInstalledState(item, ctx);
+
+  if (!state.installed) {
+    return { mismatch: false, mismatchChecked: true };
+  }
+
+  if (state.installedVia === "file") {
+    const filePath = getFileInstallPath(item, ctx);
+    if (!filePath) {
+      return { mismatch: false, mismatchChecked: true };
+    }
+
+    try {
+      const raw = await fs.promises.readFile(filePath, "utf-8");
+      const installedHash = hashNormalizedText(raw);
+      return { mismatch: installedHash !== item.storeHash, mismatchChecked: true };
+    } catch {
+      return { mismatch: true, mismatchChecked: true };
+    }
+  }
+
+  if (state.installedVia === "json") {
+    if (item.type !== "provider" && item.type !== "mcp") {
+      return { mismatch: false, mismatchChecked: true };
+    }
+
+    const payload = getInstalledJsonPayload(item, ctx);
+    if (payload === undefined) {
+      return { mismatch: true, mismatchChecked: true };
+    }
+
+    const installedHash = hashCanonicalJson(payload);
+    return { mismatch: installedHash !== item.storeHash, mismatchChecked: true };
+  }
+
+  return { mismatch: false, mismatchChecked: true };
 }
 
 /** Install a store item into OpenCode's active config scope. */

@@ -10,15 +10,58 @@
  *
  * Options:
  *   --target <id>    Target adapter (opencode, claude-code, codex-cli, codex-app)
+ *   --update         Update installed project items from store and exit
  */
 import React from "react";
 import { render } from "ink";
 import { loadIndex } from "./lib/store.js";
-import { detectProjectContext } from "./lib/project-context.js";
-import { buildStoreViewForTarget, initAdapter, resolveTargetId } from "./lib/target-manager.js";
+import { detectExactProjectContext, detectProjectContext } from "./lib/project-context.js";
+import { buildStoreViewForTarget, initAdapter, resolveTargetId, installItemForTarget } from "./lib/target-manager.js";
 import { loadSettings } from "./lib/settings.js";
 import type { TargetId, AppView } from "./lib/types.js";
 import StoreApp from "./components/StoreApp.js";
+
+function hasUpdateFlag(argv: string[] = process.argv.slice(2)): boolean {
+  return argv.includes("--update");
+}
+
+function runProjectUpdate(targetId: TargetId): number {
+  const ctx = detectExactProjectContext();
+  if (ctx.mode !== "project") {
+    console.error("--update only works when run from an exact project root directory (contains .git or .opencode).");
+    return 1;
+  }
+
+  const index = loadIndex();
+  if (index.items.length === 0) {
+    console.error("No items found in the store. Add items to store/ and rebuild index.");
+    return 1;
+  }
+
+  const view = buildStoreViewForTarget(index.items, targetId, ctx);
+  const items = [...view.agents, ...view.commands, ...view.skills, ...view.providers, ...view.mcps];
+
+  const updatable = items.filter((item) => {
+    const supportMode = item.state.supportMode ?? "yes";
+    return item.state.installed && supportMode === "yes";
+  });
+
+  let updated = 0;
+  for (const item of updatable) {
+    try {
+      // Re-installing overwrites with the latest store content.
+      installItemForTarget(item, targetId, ctx);
+      updated += 1;
+    } catch (err) {
+      console.error(`Failed to update ${item.type}:${item.id} - ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  console.log(
+    `Updated ${updated}/${updatable.length} installed items for project '${ctx.projectName ?? ctx.projectDir}' using target '${targetId}'.`
+  );
+  return 0;
+}
 
 function parseSubcommand(argv: string[]): AppView | null {
   // Find the first non-flag argument
@@ -74,6 +117,11 @@ async function main() {
 
   // Lazy-load only the required target adapter
   await initAdapter(targetId);
+
+  if (hasUpdateFlag()) {
+    const code = runProjectUpdate(targetId);
+    process.exit(code);
+  }
 
   // Load the store index (scans store/ directory)
   const index = loadIndex();

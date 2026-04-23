@@ -1,7 +1,14 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Box, Text, useInput, useApp } from "ink";
 import type { StoreItemWithState, StoreItemType, StoreView, ProjectContext, TargetId, AppView } from "../lib/types.js";
-import { getInstalledStateForTarget, getTargetLabel, toggleItemForTarget, buildStoreViewForTarget, initAdapter } from "../lib/target-manager.js";
+import {
+  getInstalledStateForTarget,
+  getTargetLabel,
+  toggleItemForTarget,
+  buildStoreViewForTarget,
+  initAdapter,
+  enrichStoreViewMismatchForTarget,
+} from "../lib/target-manager.js";
 import { loadIndex } from "../lib/store.js";
 import { detectProjectContext } from "../lib/project-context.js";
 import { addProject } from "../lib/projects.js";
@@ -40,8 +47,9 @@ interface ItemRowProps {
 function ItemRow({ item, selected, isProjectMode }: ItemRowProps) {
   const isGlobalOnly = isProjectMode && !item.state.installed && item.state.globalInstalled;
   const supportMode = item.state.supportMode ?? "yes";
-  const icon = item.state.installed ? "✓" : isGlobalOnly ? "◆" : "○";
-  const iconColor = item.state.installed ? "green" : isGlobalOnly ? "blue" : "gray";
+  const isMismatch = item.state.installed && item.state.mismatchChecked === true && item.state.mismatch === true;
+  const icon = isMismatch ? "!" : item.state.installed ? "✓" : isGlobalOnly ? "◆" : "○";
+  const iconColor = isMismatch ? "yellow" : item.state.installed ? "green" : isGlobalOnly ? "blue" : "gray";
 
   let displayName = item.name;
   if (item.type === "command") displayName = `/${item.name}`;
@@ -59,6 +67,7 @@ function ItemRow({ item, selected, isProjectMode }: ItemRowProps) {
         </Text>
         {supportMode === "partial" && <Text color="yellow"> [partial]</Text>}
         {supportMode === "no" && <Text color="red"> [unsupported]</Text>}
+        {isMismatch && <Text color="yellow"> [mismatch]</Text>}
         {isGlobalOnly && <Text color="blue"> [global]</Text>}
         <Text color="gray"> — {item.description}</Text>
       </Text>
@@ -87,6 +96,7 @@ function DetailPanel({ item, isProjectMode }: DetailPanelProps) {
   const supportMode = item.state.supportMode ?? "yes";
   const isUnsupported = supportMode === "no";
   const isPartial = supportMode === "partial";
+  const isMismatch = item.state.installed && item.state.mismatchChecked === true && item.state.mismatch === true;
 
   return (
     <Box
@@ -111,6 +121,8 @@ function DetailPanel({ item, isProjectMode }: DetailPanelProps) {
         <Text color="gray">Status: </Text>
         {isUnsupported ? (
           <Text color="red">Unsupported for target</Text>
+        ) : isMismatch ? (
+          <Text color="yellow">Installed but different from store (press Enter to overwrite)</Text>
         ) : item.state.installed ? (
           <Text color="green">
             Installed{isProjectMode ? " (project)" : ""}{item.state.installedVia ? ` via ${item.state.installedVia}` : ""}
@@ -224,9 +236,10 @@ function ManageView({ view, onViewChanged, onSwitchView }: ManageViewProps) {
         }
 
         const nowInstalled = toggleItemForTarget(selectedItem, targetId, ctx);
+        const wasMismatch = selectedItem.state.installed && selectedItem.state.mismatch === true;
         setMessage(
           nowInstalled
-            ? `+ Installed ${selectedItem.name}${isProjectMode ? " (project)" : ""}`
+            ? `${wasMismatch ? "~ Updated" : "+ Installed"} ${selectedItem.name}${isProjectMode ? " (project)" : ""}`
             : `- Uninstalled ${selectedItem.name}${isProjectMode ? " (project)" : ""}`
         );
         refreshView();
@@ -319,7 +332,7 @@ function ManageView({ view, onViewChanged, onSwitchView }: ManageViewProps) {
           <Text color="gray">←/→ category  ↑/↓ navigate  Enter/Space toggle  Tab next view  q quit</Text>
           {isProjectMode && (
             <Text color="gray">
-              <Text color="green">✓</Text> project  <Text color="blue">◆</Text> global only  <Text color="gray">○</Text> not installed
+              <Text color="green">✓</Text> project  <Text color="yellow">!</Text> mismatch  <Text color="blue">◆</Text> global only  <Text color="gray">○</Text> not installed
             </Text>
           )}
         </Box>
@@ -339,6 +352,37 @@ export default function StoreApp({ initialView, initialAppView = "manage" }: Sto
   const { exit } = useApp();
   const [appView, setAppView] = useState<AppView>(initialAppView);
   const [storeView, setStoreView] = useState<StoreView>(initialView);
+
+  useEffect(() => {
+    const targetId = storeView.targetId ?? "opencode";
+    const categories: Array<keyof Pick<StoreView, "agents" | "commands" | "skills" | "providers" | "mcps">> = [
+      "agents",
+      "commands",
+      "skills",
+      "providers",
+      "mcps",
+    ];
+
+    const hasPendingChecks = categories.some((category) =>
+      storeView[category].some((item) => item.state.installed && item.state.mismatchChecked !== true)
+    );
+
+    if (!hasPendingChecks) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void enrichStoreViewMismatchForTarget(storeView, targetId).then((nextView) => {
+      if (!cancelled && nextView !== storeView) {
+        setStoreView(nextView);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [storeView]);
 
   // Global quit handler
   useInput((input, key) => {

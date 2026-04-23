@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "items": [
     {
       "id": "architect",
@@ -9,7 +9,8 @@
       "tags": [
         "all"
       ],
-      "path": "agents/architect.md"
+      "path": "agents/architect.md",
+      "storeHash": "cf472c4759920566530bfd808a373572c43f0307e7dfb7259f30226572559266"
     },
     {
       "id": "brainstorm",
@@ -19,7 +20,8 @@
       "tags": [
         "all"
       ],
-      "path": "agents/brainstorm.md"
+      "path": "agents/brainstorm.md",
+      "storeHash": "3e9b47d83934cd5571a6ef35c1e362f4ad2b5ad0a1b287ecdf303539370250f8"
     },
     {
       "id": "epic-manager",
@@ -29,7 +31,8 @@
       "tags": [
         "primary"
       ],
-      "path": "agents/epic-manager.md"
+      "path": "agents/epic-manager.md",
+      "storeHash": "794990e7f7e95c79c9a1c71ffb338bda855a38759f8f6df763a5d11cf8058102"
     },
     {
       "id": "task-lead",
@@ -39,7 +42,8 @@
       "tags": [
         "primary"
       ],
-      "path": "agents/task-lead.md"
+      "path": "agents/task-lead.md",
+      "storeHash": "ed97c4f01efe9b8e01f59d62da2b9de6de28fa105de17cff58c4d45c8ad7bdbb"
     },
     {
       "id": "update-agents",
@@ -47,7 +51,8 @@
       "name": "update-agents",
       "description": "Updates AGENTs.md with the current session and context.",
       "tags": [],
-      "path": "commands/update-agents.md"
+      "path": "commands/update-agents.md",
+      "storeHash": "833aaba7c5e8774e0df7a0e28e1313e3fb7fcabac35ad9620608c3b997610a86"
     },
     {
       "id": "code-comments",
@@ -61,7 +66,8 @@
         "domain:code-quality",
         "platform:universal"
       ],
-      "path": "skills/code-comments/SKILL.md"
+      "path": "skills/code-comments/SKILL.md",
+      "storeHash": "e5806596dc0e2a869b7109839b7ae449474191f08b6ac7872b5faf62734a4e49"
     },
     {
       "id": "conventional-commit",
@@ -75,7 +81,8 @@
         "domain:git",
         "platform:universal"
       ],
-      "path": "skills/conventional-commit/SKILL.md"
+      "path": "skills/conventional-commit/SKILL.md",
+      "storeHash": "59021728d512632f36b073052db52e99c1aa7904360807b133248554e0bce740"
     },
     {
       "id": "create-command",
@@ -89,7 +96,8 @@
         "domain:opencode",
         "platform:universal"
       ],
-      "path": "skills/create-command/SKILL.md"
+      "path": "skills/create-command/SKILL.md",
+      "storeHash": "0e0864787db83f5114f63162a028b5242972a412cc7aff5fb0d67171034e3da4"
     },
     {
       "id": "create-skill",
@@ -103,7 +111,8 @@
         "domain:opencode",
         "platform:universal"
       ],
-      "path": "skills/create-skill/SKILL.md"
+      "path": "skills/create-skill/SKILL.md",
+      "storeHash": "8273bb25c0b02526d556d87f58996d6d8718a89f01f241c3b2be52023d536e6a"
     },
     {
       "id": "ticket-commit",
@@ -117,7 +126,8 @@
         "domain:git",
         "platform:universal"
       ],
-      "path": "skills/ticket-commit/SKILL.md"
+      "path": "skills/ticket-commit/SKILL.md",
+      "storeHash": "3f0cef904e0db96a27856de2836c34592b0677aecd08d0c718c9321e7b36715c"
     },
     {
       "id": "atlassian-mcp-server-jira",
@@ -130,7 +140,8 @@
         "jira",
         "confluence"
       ],
-      "path": "mcps/atlassian-mcp-server-jira.json"
+      "path": "mcps/atlassian-mcp-server-jira.json",
+      "storeHash": "b80cc66527d43984ab2f7fa5e6d115a1ac607509e5f8c8f30f24503cfeb47858"
     },
     {
       "id": "chrome-devtools",
@@ -143,7 +154,8 @@
         "browser",
         "development"
       ],
-      "path": "mcps/chrome-devtools.json"
+      "path": "mcps/chrome-devtools.json",
+      "storeHash": "edcc1a0d2355e9197659a402c2a9b952d626594d646f7a373500554b5e633d60"
     },
     {
       "id": "github-mcp",
@@ -155,7 +167,8 @@
         "github",
         "copilot"
       ],
-      "path": "mcps/github-mcp.json"
+      "path": "mcps/github-mcp.json",
+      "storeHash": "b9aff3fff4e81389b8ec1ff27c9b11944e57bc939a82db93d814deb5bbf63e6e"
     }
   ]
 }
