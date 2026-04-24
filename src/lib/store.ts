@@ -10,6 +10,7 @@ import type {
   StoreIndex,
   StoreItemMeta,
   StoreItemType,
+  TargetId,
   AgentFrontmatter,
   CommandFrontmatter,
   SkillFrontmatter,
@@ -22,6 +23,26 @@ export interface ScanSourceMeta {
   id: string;
   name: string;
   root: string;
+}
+
+const VALID_TARGET_IDS: readonly TargetId[] = ["opencode", "claude-code", "codex-cli", "codex-app"];
+
+function parseTargetIds(raw: unknown): TargetId[] | undefined {
+  if (raw === undefined || raw === null) return undefined;
+
+  const values = Array.isArray(raw) ? raw : [raw];
+  const parsed = values
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter((value): value is TargetId => VALID_TARGET_IDS.includes(value as TargetId));
+
+  if (parsed.length === 0) return undefined;
+  return [...new Set(parsed)];
+}
+
+function withTargetTags(tags: string[], targetIds?: TargetId[]): string[] {
+  if (!targetIds || targetIds.length === 0) return tags;
+  return [...tags, ...targetIds.map((targetId) => `target:${targetId}`)];
 }
 
 function attachSource(item: StoreItemMeta, source?: ScanSourceMeta): StoreItemMeta {
@@ -46,6 +67,7 @@ function scanAgents(storePath: string, source?: ScanSourceMeta): StoreItemMeta[]
     const parsed = matter(raw);
     const data = parsed.data as AgentFrontmatter;
     const id = path.basename(file, ".md");
+    const targetIds = parseTargetIds(data.targets);
     results.push(
       attachSource(
         {
@@ -53,9 +75,10 @@ function scanAgents(storePath: string, source?: ScanSourceMeta): StoreItemMeta[]
           type: "agent" as StoreItemType,
           name: id,
           description: data.description ?? `Agent: ${id}`,
-          tags: [data.mode ?? "subagent", ...(data.model ? [data.model.split("/")[0]] : [])],
+          tags: withTargetTags([data.mode ?? "subagent", ...(data.model ? [data.model.split("/")[0]] : [])], targetIds),
           path: `agents/${file}`,
           storeHash: hashNormalizedText(raw),
+          targetIds,
         },
         source
       )
@@ -76,6 +99,7 @@ function scanCommands(storePath: string, source?: ScanSourceMeta): StoreItemMeta
     const parsed = matter(raw);
     const data = parsed.data as CommandFrontmatter;
     const id = path.basename(file, ".md");
+    const targetIds = parseTargetIds(data.targets);
     results.push(
       attachSource(
         {
@@ -83,9 +107,10 @@ function scanCommands(storePath: string, source?: ScanSourceMeta): StoreItemMeta
           type: "command" as StoreItemType,
           name: id,
           description: data.description ?? `Command: /${id}`,
-          tags: [...(data.agent ? [`agent:${data.agent}`] : [])],
+          tags: withTargetTags([...(data.agent ? [`agent:${data.agent}`] : [])], targetIds),
           path: `commands/${file}`,
           storeHash: hashNormalizedText(raw),
+          targetIds,
         },
         source
       )
@@ -110,6 +135,8 @@ function scanSkills(storePath: string, source?: ScanSourceMeta): StoreItemMeta[]
 
     if (!data.name || !data.description) continue;
 
+    const targetIds = parseTargetIds(data.targets);
+
     results.push(
       attachSource(
         {
@@ -117,13 +144,17 @@ function scanSkills(storePath: string, source?: ScanSourceMeta): StoreItemMeta[]
           type: "skill" as StoreItemType,
           name: data.name,
           description: data.description,
-          tags: [
-            ...(data.license ? [`license:${data.license}`] : []),
-            ...(data.compatibility ? [data.compatibility] : []),
-            ...(data.metadata ? Object.entries(data.metadata).map(([k, v]) => `${k}:${v}`) : []),
-          ],
+          tags: withTargetTags(
+            [
+              ...(data.license ? [`license:${data.license}`] : []),
+              ...(data.compatibility ? [data.compatibility] : []),
+              ...(data.metadata ? Object.entries(data.metadata).map(([k, v]) => `${k}:${v}`) : []),
+            ],
+            targetIds
+          ),
           path: `skills/${entry.name}/SKILL.md`,
           storeHash: hashNormalizedText(raw),
+          targetIds,
         },
         source
       )

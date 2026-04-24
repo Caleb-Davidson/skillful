@@ -151,6 +151,8 @@ Agents (`store/agents/<name>.md`):
 ---
 description: What this agent does
 mode: subagent
+targets:
+  - opencode
 tools:
   write: false
 ---
@@ -164,6 +166,7 @@ Commands (`store/commands/<name>.md`):
 ---
 description: What this command does
 agent: build
+targets: [opencode, codex-cli]
 ---
 
 Prompt template. Use $ARGUMENTS for user input.
@@ -175,10 +178,13 @@ Skills (`store/skills/<folder>/SKILL.md`):
 ---
 name: my-skill
 description: What this skill teaches
+targets: codex-app
 ---
 
 Skill content.
 ```
+
+`targets` is optional for agents, commands, and skills. When present, the item is only shown for the listed targets (`opencode`, `claude-code`, `codex-cli`, `codex-app`).
 
 Providers (`store/providers/<name>.json`) and MCPs (`store/mcps/<name>.json`) must include `_meta.description`; everything except `_meta` is treated as the install payload.
 

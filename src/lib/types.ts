@@ -41,6 +41,8 @@ export interface StoreItemMeta {
   sourceRoot?: string;
   /** Build-time hash of normalized store content */
   storeHash?: string;
+  /** Optional target allow-list; if set, item is only shown for these targets */
+  targetIds?: TargetId[];
 }
 
 export interface StoreIndex {
@@ -61,6 +63,7 @@ export interface AgentFrontmatter {
   permission?: Record<string, unknown>;
   top_p?: number;
   disable?: boolean;
+  targets?: TargetId | TargetId[];
   [key: string]: unknown;
 }
 
@@ -70,6 +73,7 @@ export interface CommandFrontmatter {
   agent?: string;
   model?: string;
   subtask?: boolean;
+  targets?: TargetId | TargetId[];
   [key: string]: unknown;
 }
 
@@ -80,6 +84,7 @@ export interface SkillFrontmatter {
   license?: string;
   compatibility?: string;
   metadata?: Record<string, string>;
+  targets?: TargetId | TargetId[];
 }
 
 /**

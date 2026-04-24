@@ -13,6 +13,11 @@ const VALID_TARGETS: TargetId[] = ["opencode", "claude-code", "codex-cli", "code
 // Lazy-loaded adapter cache — only the selected adapter is imported.
 let _cachedAdapter: { id: TargetId; adapter: TargetAdapter } | null = null;
 
+function isItemVisibleForTarget(item: StoreItemMeta, targetId: TargetId): boolean {
+  if (!item.targetIds || item.targetIds.length === 0) return true;
+  return item.targetIds.includes(targetId);
+}
+
 async function loadAdapter(id: TargetId): Promise<TargetAdapter> {
   switch (id) {
     case "opencode": {
@@ -196,8 +201,9 @@ export async function enrichStoreViewMismatchForTarget(view: StoreView, targetId
 
 export function buildStoreViewForTarget(items: StoreItemMeta[], targetId: TargetId, ctx?: ProjectContext): StoreView {
   const context: ProjectContext = ctx ?? { mode: "global" };
+  const visibleItems = items.filter((item) => isItemVisibleForTarget(item, targetId));
 
-  const withState: StoreItemWithState[] = items.map((item) => ({
+  const withState: StoreItemWithState[] = visibleItems.map((item) => ({
     ...item,
     state: getInstalledStateForTarget(item, targetId, context),
   }));
