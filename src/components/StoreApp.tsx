@@ -1,16 +1,14 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Box, Text, useInput, useApp } from "ink";
-import type { StoreItemWithState, StoreItemType, StoreView, ProjectContext, TargetId, AppView } from "../lib/types.js";
+import type { StoreItemMeta, StoreItemWithState, StoreItemType, StoreView, ProjectContext, TargetId, AppView } from "../lib/types.js";
 import {
   getInstalledStateForTarget,
   getTargetLabel,
   toggleItemForTarget,
   buildStoreViewForTarget,
-  initAdapter,
   enrichStoreViewMismatchForTarget,
 } from "../lib/target-manager.js";
-import { loadIndex } from "../lib/store.js";
-import { detectProjectContext } from "../lib/project-context.js";
+import { checkEnabledSourcesForUpdates, loadMergedIndexFromConfiguredSources } from "../lib/source-sync.js";
 import { addProject } from "../lib/projects.js";
 import ProjectsView from "./ProjectsView.js";
 import SettingsView from "./SettingsView.js";
@@ -147,6 +145,13 @@ function DetailPanel({ item, isProjectMode }: DetailPanelProps) {
         <Text color="gray">Store path: </Text>
         <Text dimColor>{item.path}</Text>
       </Text>
+      {item.sourceLabel && (
+        <Text>
+          <Text color="gray">Source: </Text>
+          <Text color="yellow">{item.sourceLabel}</Text>
+          {item.sourceId ? <Text color="gray"> ({item.sourceId})</Text> : null}
+        </Text>
+      )}
     </Box>
   );
 }
@@ -352,6 +357,19 @@ export default function StoreApp({ initialView, initialAppView = "manage" }: Sto
   const { exit } = useApp();
   const [appView, setAppView] = useState<AppView>(initialAppView);
   const [storeView, setStoreView] = useState<StoreView>(initialView);
+  const [sourceStatusMessage, setSourceStatusMessage] = useState<string | null>(null);
+
+  async function loadEffectiveItems(): Promise<StoreItemMeta[]> {
+    const merged = await loadMergedIndexFromConfiguredSources();
+    return merged.index.items;
+  }
+
+  async function refreshStoreFromSources(): Promise<void> {
+    const targetId = storeView.targetId ?? "opencode";
+    const items = await loadEffectiveItems();
+    const nextView = buildStoreViewForTarget(items, targetId, storeView.context);
+    setStoreView(nextView);
+  }
 
   useEffect(() => {
     const targetId = storeView.targetId ?? "opencode";
@@ -384,6 +402,28 @@ export default function StoreApp({ initialView, initialAppView = "manage" }: Sto
     };
   }, [storeView]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    void checkEnabledSourcesForUpdates().then((statuses) => {
+      if (cancelled) return;
+      const updates = statuses.filter((status) => status.hasUpdate);
+      if (updates.length > 0) {
+        setSourceStatusMessage(
+          `Updates available from ${updates.length} source${updates.length === 1 ? "" : "s"}. Open Settings to refresh.`
+        );
+      } else {
+        setSourceStatusMessage(null);
+      }
+    }).catch(() => {
+      // Non-fatal: source update checks are best-effort.
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Global quit handler
   useInput((input, key) => {
     if (input === "q" || (key.ctrl && input === "c")) {
@@ -392,23 +432,28 @@ export default function StoreApp({ initialView, initialAppView = "manage" }: Sto
   });
 
   function handleSwitchToProject(projectPath: string, projectTarget?: TargetId) {
-    // Build a new store view for the selected project
-    const targetId = projectTarget ?? storeView.targetId ?? "opencode";
+    void (async () => {
+      // Build a new store view for the selected project
+      const targetId = projectTarget ?? storeView.targetId ?? "opencode";
 
-    // Re-detect project context for the selected path
-    const ctx: ProjectContext = {
-      mode: "project",
-      projectDir: projectPath,
-      projectName: projectPath.split("/").pop() ?? projectPath,
-    };
+      // Re-detect project context for the selected path
+      const ctx: ProjectContext = {
+        mode: "project",
+        projectDir: projectPath,
+        projectName: projectPath.split("/").pop() ?? projectPath,
+      };
 
-    // Auto-register the project if switching to it
-    addProject(projectPath);
+      // Auto-register the project if switching to it
+      addProject(projectPath);
 
-    const index = loadIndex();
-    const view = buildStoreViewForTarget(index.items, targetId, ctx);
-    setStoreView(view);
-    setAppView("manage");
+      const items = await loadEffectiveItems();
+      const view = buildStoreViewForTarget(items, targetId, ctx);
+      setStoreView(view);
+      setAppView("manage");
+    })().catch((err) => {
+      const detail = err instanceof Error ? err.message : String(err);
+      setSourceStatusMessage(`Failed to switch project store: ${detail}`);
+    });
   }
 
   function handleSwitchView(view: AppView) {
@@ -437,6 +482,11 @@ export default function StoreApp({ initialView, initialAppView = "manage" }: Sto
   return (
     <Box flexDirection="column">
       {viewTabs}
+      {sourceStatusMessage && (
+        <Box paddingX={1}>
+          <Text color="yellow">{sourceStatusMessage}</Text>
+        </Box>
+      )}
       {appView === "manage" && (
         <ManageView
           view={storeView}
@@ -454,6 +504,7 @@ export default function StoreApp({ initialView, initialAppView = "manage" }: Sto
       {appView === "settings" && (
         <SettingsView
           onSwitchView={handleSwitchView}
+          onSourcesChanged={refreshStoreFromSources}
         />
       )}
     </Box>

@@ -14,31 +14,39 @@
  */
 import React from "react";
 import { render } from "ink";
-import { loadIndex } from "./lib/store.js";
 import { detectExactProjectContext, detectProjectContext } from "./lib/project-context.js";
 import { buildStoreViewForTarget, initAdapter, resolveTargetId, installItemForTarget } from "./lib/target-manager.js";
 import { loadSettings } from "./lib/settings.js";
-import type { TargetId, AppView } from "./lib/types.js";
+import { loadMergedIndexFromConfiguredSources } from "./lib/source-sync.js";
+import type { TargetId, AppView, StoreSource, StoreItemMeta } from "./lib/types.js";
 import StoreApp from "./components/StoreApp.js";
 
 function hasUpdateFlag(argv: string[] = process.argv.slice(2)): boolean {
   return argv.includes("--update");
 }
 
-function runProjectUpdate(targetId: TargetId): number {
+async function loadEffectiveIndex(): Promise<{ items: StoreItemMeta[]; sources: StoreSource[] }> {
+  const merged = await loadMergedIndexFromConfiguredSources();
+  return {
+    items: merged.index.items,
+    sources: merged.sources,
+  };
+}
+
+async function runProjectUpdate(targetId: TargetId): Promise<number> {
   const ctx = detectExactProjectContext();
   if (ctx.mode !== "project") {
     console.error("--update only works when run from an exact project root directory (contains .git or .opencode).");
     return 1;
   }
 
-  const index = loadIndex();
-  if (index.items.length === 0) {
-    console.error("No items found in the store. Add items to store/ and rebuild index.");
+  const loaded = await loadEffectiveIndex();
+  if (loaded.items.length === 0) {
+    console.error("No items found in configured sources.");
     return 1;
   }
 
-  const view = buildStoreViewForTarget(index.items, targetId, ctx);
+  const view = buildStoreViewForTarget(loaded.items, targetId, ctx);
   const items = [...view.agents, ...view.commands, ...view.skills, ...view.providers, ...view.mcps];
 
   const updatable = items.filter((item) => {
@@ -102,11 +110,24 @@ async function main() {
     argv.push(rawArgv[i]);
   }
   const explicitView = parseSubcommand(argv);
+  // Lazy-load only the required target adapter
+  await initAdapter(targetId);
+
+  if (hasUpdateFlag()) {
+    const code = await runProjectUpdate(targetId);
+    process.exit(code);
+  }
+
+  // Load merged index from configured source caches.
+  const loaded = await loadEffectiveIndex();
+  const enabledSourceCount = loaded.sources.filter((source) => source.enabled).length;
+
   let startView: AppView;
   if (explicitView) {
     startView = explicitView;
+  } else if (enabledSourceCount === 0) {
+    startView = "settings";
   } else {
-    // Use settings default, falling back to "manage"
     const defaultView = settings.defaultView ?? "auto";
     if (defaultView === "auto") {
       startView = ctx.mode === "project" ? "manage" : "projects";
@@ -115,24 +136,8 @@ async function main() {
     }
   }
 
-  // Lazy-load only the required target adapter
-  await initAdapter(targetId);
-
-  if (hasUpdateFlag()) {
-    const code = runProjectUpdate(targetId);
-    process.exit(code);
-  }
-
-  // Load the store index (scans store/ directory)
-  const index = loadIndex();
-
-  if (index.items.length === 0) {
-    console.error("No items found in the store. Add agents, commands, or skills to the store/ directory.");
-    process.exit(1);
-  }
-
   // Build the view with installed states, scoped to the detected context
-  const view = buildStoreViewForTarget(index.items, targetId, ctx);
+  const view = buildStoreViewForTarget(loaded.items, targetId, ctx);
 
   // Render the TUI
   render(React.createElement(StoreApp, { initialView: view, initialAppView: startView }));

@@ -33,6 +33,12 @@ export interface StoreItemMeta {
   tags: string[];
   /** Relative path within the store */
   path: string;
+  /** Source identifier this item came from */
+  sourceId?: string;
+  /** Human-readable source label */
+  sourceLabel?: string;
+  /** Absolute path to the source repository root */
+  sourceRoot?: string;
   /** Build-time hash of normalized store content */
   storeHash?: string;
 }
@@ -170,4 +176,47 @@ export interface UserSettings {
   defaultTarget?: TargetId;
   /** Which view to open on startup: manage, projects, or auto (detect from cwd) */
   defaultView?: AppView | "auto";
+}
+
+/** Configured external content source (git repository). */
+export interface StoreSource {
+  /** Stable identifier used for cache paths and item source IDs. */
+  id: string;
+  /** Human-readable label for display in the UI. */
+  name: string;
+  /** Git repository URL (https or ssh). */
+  url: string;
+  /** Branch to track. Defaults to remote HEAD if omitted. */
+  branch?: string;
+  /** Whether this source participates in merged store results. */
+  enabled: boolean;
+  /** 0 is highest priority, larger numbers are lower priority. */
+  priority: number;
+  /** Last successful remote check timestamp (ISO string). */
+  lastCheckedAt?: string;
+  /** Last observed remote head commit. */
+  lastKnownRemoteHead?: string;
+  /** Local fetched/checked-out head commit in cache. */
+  lastFetchedHead?: string;
+  /** Commit hash the cached source index was built from. */
+  indexedHead?: string;
+  /** Last index build timestamp (ISO string). */
+  lastIndexedAt?: string;
+  /** Last check/fetch error message, if any. */
+  lastError?: string;
+}
+
+/** Source registry stored in ~/.config/skillful/sources.json. */
+export interface SourceRegistry {
+  sources: StoreSource[];
+}
+
+/** Source check status used in UI messaging. */
+export interface SourceUpdateStatus {
+  sourceId: string;
+  sourceName: string;
+  hasUpdate: boolean;
+  remoteHead?: string;
+  localHead?: string;
+  error?: string;
 }

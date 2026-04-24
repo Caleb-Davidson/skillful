@@ -9,7 +9,7 @@ import path from "node:path";
 import os from "node:os";
 import { parse as parseJsonc, modify, applyEdits } from "jsonc-parser";
 import type { StoreItemMeta, InstalledState, ProjectContext } from "../types.js";
-import { getStorePath } from "../store.js";
+import { resolveStoreItemPath } from "../store.js";
 import { hashCanonicalJson, hashNormalizedText } from "../hash.js";
 
 const FORMAT_OPTS = { formattingOptions: { insertSpaces: true, tabSize: 2 } };
@@ -193,8 +193,7 @@ function getProjectFiles(ctx: ProjectContext): { agents: string[]; commands: str
 
 /** Read a store JSON file and return the config payload (without _meta) */
 function readStoreJsonPayload(item: StoreItemMeta): Record<string, unknown> {
-  const storePath = getStorePath();
-  const srcPath = path.join(storePath, item.path);
+  const srcPath = resolveStoreItemPath(item);
   const raw = fs.readFileSync(srcPath, "utf-8");
   const parsed = parseJsonc(raw) as Record<string, unknown>;
   const { _meta: _, ...payload } = parsed;
@@ -368,8 +367,7 @@ export async function getMismatchState(
 
 /** Install a store item into OpenCode's active config scope. */
 export function installItem(item: StoreItemMeta, ctx?: ProjectContext): void {
-  const storePath = getStorePath();
-  const srcPath = path.join(storePath, item.path);
+  const srcPath = resolveStoreItemPath(item);
 
   if (!fs.existsSync(srcPath)) {
     throw new Error(`Store item not found: ${srcPath}`);

@@ -1,5 +1,5 @@
 /**
- * Scans the local store/ directory and builds an index of all available items.
+ * Scans one or more store/ directories and builds an index of available items.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -16,25 +16,47 @@ import type {
   SkillFrontmatter,
   ProviderStoreFile,
   McpStoreFile,
+  StoreSource,
 } from "./types.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-/** Root of this package (where store/ lives) */
-function getProjectRoot(): string {
+export interface ScanSourceMeta {
+  id: string;
+  name: string;
+  root: string;
+}
+
+/** Root of this package (where local store/ may live). */
+function getProjectRoot(): string | null {
   let dir = __dirname;
   while (dir !== "/" && !fs.existsSync(path.join(dir, "store"))) {
     dir = path.dirname(dir);
   }
+  if (dir === "/") return null;
   return dir;
 }
 
 export function getStorePath(): string {
-  return path.join(getProjectRoot(), "store");
+  const projectRoot = getProjectRoot();
+  if (!projectRoot) {
+    throw new Error("Could not locate local store/ directory.");
+  }
+  return path.join(projectRoot, "store");
 }
 
-function scanAgents(storePath: string): StoreItemMeta[] {
+function attachSource(item: StoreItemMeta, source?: ScanSourceMeta): StoreItemMeta {
+  if (!source) return item;
+  return {
+    ...item,
+    sourceId: source.id,
+    sourceLabel: source.name,
+    sourceRoot: source.root,
+  };
+}
+
+function scanAgents(storePath: string, source?: ScanSourceMeta): StoreItemMeta[] {
   const agentsDir = path.join(storePath, "agents");
   if (!fs.existsSync(agentsDir)) return [];
 
@@ -46,20 +68,25 @@ function scanAgents(storePath: string): StoreItemMeta[] {
     const parsed = matter(raw);
     const data = parsed.data as AgentFrontmatter;
     const id = path.basename(file, ".md");
-    results.push({
-      id,
-      type: "agent" as StoreItemType,
-      name: id,
-      description: data.description ?? `Agent: ${id}`,
-      tags: [data.mode ?? "subagent", ...(data.model ? [data.model.split("/")[0]] : [])],
-      path: `agents/${file}`,
-      storeHash: hashNormalizedText(raw),
-    });
+    results.push(
+      attachSource(
+        {
+          id,
+          type: "agent" as StoreItemType,
+          name: id,
+          description: data.description ?? `Agent: ${id}`,
+          tags: [data.mode ?? "subagent", ...(data.model ? [data.model.split("/")[0]] : [])],
+          path: `agents/${file}`,
+          storeHash: hashNormalizedText(raw),
+        },
+        source
+      )
+    );
   }
   return results;
 }
 
-function scanCommands(storePath: string): StoreItemMeta[] {
+function scanCommands(storePath: string, source?: ScanSourceMeta): StoreItemMeta[] {
   const commandsDir = path.join(storePath, "commands");
   if (!fs.existsSync(commandsDir)) return [];
 
@@ -71,20 +98,25 @@ function scanCommands(storePath: string): StoreItemMeta[] {
     const parsed = matter(raw);
     const data = parsed.data as CommandFrontmatter;
     const id = path.basename(file, ".md");
-    results.push({
-      id,
-      type: "command" as StoreItemType,
-      name: id,
-      description: data.description ?? `Command: /${id}`,
-      tags: [...(data.agent ? [`agent:${data.agent}`] : [])],
-      path: `commands/${file}`,
-      storeHash: hashNormalizedText(raw),
-    });
+    results.push(
+      attachSource(
+        {
+          id,
+          type: "command" as StoreItemType,
+          name: id,
+          description: data.description ?? `Command: /${id}`,
+          tags: [...(data.agent ? [`agent:${data.agent}`] : [])],
+          path: `commands/${file}`,
+          storeHash: hashNormalizedText(raw),
+        },
+        source
+      )
+    );
   }
   return results;
 }
 
-function scanSkills(storePath: string): StoreItemMeta[] {
+function scanSkills(storePath: string, source?: ScanSourceMeta): StoreItemMeta[] {
   const skillsDir = path.join(storePath, "skills");
   if (!fs.existsSync(skillsDir)) return [];
 
@@ -100,26 +132,29 @@ function scanSkills(storePath: string): StoreItemMeta[] {
 
     if (!data.name || !data.description) continue;
 
-    results.push({
-      id: data.name,
-      type: "skill" as StoreItemType,
-      name: data.name,
-      description: data.description,
-      tags: [
-        ...(data.license ? [`license:${data.license}`] : []),
-        ...(data.compatibility ? [data.compatibility] : []),
-        ...(data.metadata
-          ? Object.entries(data.metadata).map(([k, v]) => `${k}:${v}`)
-          : []),
-      ],
-      path: `skills/${entry.name}/SKILL.md`,
-      storeHash: hashNormalizedText(raw),
-    });
+    results.push(
+      attachSource(
+        {
+          id: data.name,
+          type: "skill" as StoreItemType,
+          name: data.name,
+          description: data.description,
+          tags: [
+            ...(data.license ? [`license:${data.license}`] : []),
+            ...(data.compatibility ? [data.compatibility] : []),
+            ...(data.metadata ? Object.entries(data.metadata).map(([k, v]) => `${k}:${v}`) : []),
+          ],
+          path: `skills/${entry.name}/SKILL.md`,
+          storeHash: hashNormalizedText(raw),
+        },
+        source
+      )
+    );
   }
   return results;
 }
 
-function scanProviders(storePath: string): StoreItemMeta[] {
+function scanProviders(storePath: string, source?: ScanSourceMeta): StoreItemMeta[] {
   const providersDir = path.join(storePath, "providers");
   if (!fs.existsSync(providersDir)) return [];
 
@@ -134,15 +169,20 @@ function scanProviders(storePath: string): StoreItemMeta[] {
       const meta = data._meta;
       if (!meta?.description) continue;
       const { _meta: _, ...payload } = data;
-      results.push({
-        id,
-        type: "provider" as StoreItemType,
-        name: id,
-        description: meta.description,
-        tags: meta.tags ?? [],
-        path: `providers/${file}`,
-        storeHash: hashCanonicalJson(payload),
-      });
+      results.push(
+        attachSource(
+          {
+            id,
+            type: "provider" as StoreItemType,
+            name: id,
+            description: meta.description,
+            tags: meta.tags ?? [],
+            path: `providers/${file}`,
+            storeHash: hashCanonicalJson(payload),
+          },
+          source
+        )
+      );
     } catch {
       // Skip malformed JSON
     }
@@ -150,7 +190,7 @@ function scanProviders(storePath: string): StoreItemMeta[] {
   return results;
 }
 
-function scanMcps(storePath: string): StoreItemMeta[] {
+function scanMcps(storePath: string, source?: ScanSourceMeta): StoreItemMeta[] {
   const mcpsDir = path.join(storePath, "mcps");
   if (!fs.existsSync(mcpsDir)) return [];
 
@@ -165,15 +205,20 @@ function scanMcps(storePath: string): StoreItemMeta[] {
       const meta = data._meta;
       if (!meta?.description) continue;
       const { _meta: _, ...payload } = data;
-      results.push({
-        id,
-        type: "mcp" as StoreItemType,
-        name: id,
-        description: meta.description,
-        tags: meta.tags ?? [],
-        path: `mcps/${file}`,
-        storeHash: hashCanonicalJson(payload),
-      });
+      results.push(
+        attachSource(
+          {
+            id,
+            type: "mcp" as StoreItemType,
+            name: id,
+            description: meta.description,
+            tags: meta.tags ?? [],
+            path: `mcps/${file}`,
+            storeHash: hashCanonicalJson(payload),
+          },
+          source
+        )
+      );
     } catch {
       // Skip malformed JSON
     }
@@ -181,20 +226,29 @@ function scanMcps(storePath: string): StoreItemMeta[] {
   return results;
 }
 
+export function buildIndexFromStorePath(storePath: string, source?: ScanSourceMeta): StoreIndex {
+  const items: StoreItemMeta[] = [
+    ...scanAgents(storePath, source),
+    ...scanCommands(storePath, source),
+    ...scanSkills(storePath, source),
+    ...scanProviders(storePath, source),
+    ...scanMcps(storePath, source),
+  ];
+  return { version: 3, items };
+}
+
 export function buildIndex(): StoreIndex {
   const storePath = getStorePath();
-  const items: StoreItemMeta[] = [
-    ...scanAgents(storePath),
-    ...scanCommands(storePath),
-    ...scanSkills(storePath),
-    ...scanProviders(storePath),
-    ...scanMcps(storePath),
-  ];
-  return { version: 2, items };
+  return buildIndexFromStorePath(storePath);
 }
 
 export function loadIndex(): StoreIndex {
-  const indexPath = path.join(getProjectRoot(), "index.json");
+  const root = getProjectRoot();
+  if (!root) {
+    return { version: 3, items: [] };
+  }
+
+  const indexPath = path.join(root, "index.json");
   if (fs.existsSync(indexPath)) {
     const raw = fs.readFileSync(indexPath, "utf-8");
     const parsed = JSON.parse(raw) as StoreIndex;
@@ -203,4 +257,33 @@ export function loadIndex(): StoreIndex {
     }
   }
   return buildIndex();
+}
+
+export function resolveStoreItemPath(item: StoreItemMeta): string {
+  if (item.sourceRoot) {
+    return path.join(item.sourceRoot, "store", item.path);
+  }
+  return path.join(getStorePath(), item.path);
+}
+
+export function mergeIndexesBySourcePriority(sources: Array<{ source: StoreSource; index: StoreIndex }>): StoreIndex {
+  const winners = new Map<string, StoreItemMeta>();
+
+  for (const entry of [...sources].sort((a, b) => a.source.priority - b.source.priority)) {
+    for (const item of entry.index.items) {
+      const key = `${item.type}:${item.id}`;
+      if (winners.has(key)) continue;
+      winners.set(key, {
+        ...item,
+        sourceId: item.sourceId ?? entry.source.id,
+        sourceLabel: item.sourceLabel ?? entry.source.name,
+        sourceRoot: item.sourceRoot,
+      });
+    }
+  }
+
+  return {
+    version: 3,
+    items: [...winners.values()],
+  };
 }

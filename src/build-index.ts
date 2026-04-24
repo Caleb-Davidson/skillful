@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 /**
- * Builds the store index.json from the store/ directory.
- * Also updates README.md to reflect current store contents.
+ * Builds an index.json for a local store directory.
+ * If ./store does not exist, falls back to ./skillful-store/store.
+ * Also updates README.md when section markers are present.
  * Run: npm run index
  */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { buildIndex, getStorePath } from "./lib/store.js";
+import { buildIndexFromStorePath } from "./lib/store.js";
 import type { StoreIndex, StoreItemMeta } from "./lib/types.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -15,10 +16,28 @@ const __dirname = path.dirname(__filename);
 
 function getProjectRoot(): string {
   let dir = __dirname;
-  while (dir !== "/" && !fs.existsSync(path.join(dir, "store"))) {
+  while (dir !== "/" && !fs.existsSync(path.join(dir, "package.json"))) {
     dir = path.dirname(dir);
   }
+  if (dir === "/") {
+    throw new Error("Could not locate project root (package.json not found).");
+  }
   return dir;
+}
+
+function resolveStoreAndOutputRoot(projectRoot: string): { storePath: string; outputRoot: string } {
+  const primaryStorePath = path.join(projectRoot, "store");
+  if (fs.existsSync(primaryStorePath)) {
+    return { storePath: primaryStorePath, outputRoot: projectRoot };
+  }
+
+  const splitStoreRoot = path.join(projectRoot, "skillful-store");
+  const splitStorePath = path.join(splitStoreRoot, "store");
+  if (fs.existsSync(splitStorePath)) {
+    return { storePath: splitStorePath, outputRoot: splitStoreRoot };
+  }
+
+  throw new Error("No store directory found. Expected ./store or ./skillful-store/store.");
 }
 
 function generateReadmeSection(index: StoreIndex): string {
@@ -66,8 +85,11 @@ ${formatList(providers) || "_No providers available_"}
 ${formatList(mcps) || "_No MCP servers available_"}`;
 }
 
-function updateReadme(index: StoreIndex, projectRoot: string): void {
-  const readmePath = path.join(projectRoot, "README.md");
+function updateReadme(index: StoreIndex, outputRoot: string): void {
+  const readmePath = path.join(outputRoot, "README.md");
+  if (!fs.existsSync(readmePath)) {
+    return;
+  }
   const readmeContent = fs.readFileSync(readmePath, "utf-8");
 
   const startMarker = "## What's in the store";
@@ -88,10 +110,11 @@ function updateReadme(index: StoreIndex, projectRoot: string): void {
   console.log("Updated README.md with current store contents");
 }
 
-const index = buildIndex();
 const projectRoot = getProjectRoot();
-const outPath = path.join(projectRoot, "index.json");
+const { storePath, outputRoot } = resolveStoreAndOutputRoot(projectRoot);
+const index = buildIndexFromStorePath(storePath);
+const outPath = path.join(outputRoot, "index.json");
 fs.writeFileSync(outPath, JSON.stringify(index, null, 2) + "\n", "utf-8");
 console.log(`Wrote index.json with ${index.items.length} items`);
 
-updateReadme(index, projectRoot);
+updateReadme(index, outputRoot);
