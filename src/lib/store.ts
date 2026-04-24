@@ -3,7 +3,6 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import matter from "gray-matter";
 import { parse as parseJsonc } from "jsonc-parser";
 import { hashCanonicalJson, hashNormalizedText } from "./hash.js";
@@ -19,31 +18,10 @@ import type {
   StoreSource,
 } from "./types.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 export interface ScanSourceMeta {
   id: string;
   name: string;
   root: string;
-}
-
-/** Root of this package (where local store/ may live). */
-function getProjectRoot(): string | null {
-  let dir = __dirname;
-  while (dir !== "/" && !fs.existsSync(path.join(dir, "store"))) {
-    dir = path.dirname(dir);
-  }
-  if (dir === "/") return null;
-  return dir;
-}
-
-export function getStorePath(): string {
-  const projectRoot = getProjectRoot();
-  if (!projectRoot) {
-    throw new Error("Could not locate local store/ directory.");
-  }
-  return path.join(projectRoot, "store");
 }
 
 function attachSource(item: StoreItemMeta, source?: ScanSourceMeta): StoreItemMeta {
@@ -237,33 +215,11 @@ export function buildIndexFromStorePath(storePath: string, source?: ScanSourceMe
   return { version: 3, items };
 }
 
-export function buildIndex(): StoreIndex {
-  const storePath = getStorePath();
-  return buildIndexFromStorePath(storePath);
-}
-
-export function loadIndex(): StoreIndex {
-  const root = getProjectRoot();
-  if (!root) {
-    return { version: 3, items: [] };
-  }
-
-  const indexPath = path.join(root, "index.json");
-  if (fs.existsSync(indexPath)) {
-    const raw = fs.readFileSync(indexPath, "utf-8");
-    const parsed = JSON.parse(raw) as StoreIndex;
-    if (parsed.version >= 2 && parsed.items.every((item) => typeof item.storeHash === "string" && item.storeHash.length > 0)) {
-      return parsed;
-    }
-  }
-  return buildIndex();
-}
-
 export function resolveStoreItemPath(item: StoreItemMeta): string {
-  if (item.sourceRoot) {
-    return path.join(item.sourceRoot, "store", item.path);
+  if (!item.sourceRoot) {
+    throw new Error(`Store item '${item.type}:${item.id}' has no source root metadata.`);
   }
-  return path.join(getStorePath(), item.path);
+  return path.join(item.sourceRoot, "store", item.path);
 }
 
 export function mergeIndexesBySourcePriority(sources: Array<{ source: StoreSource; index: StoreIndex }>): StoreIndex {

@@ -1,231 +1,151 @@
 # skillful
 
-A terminal storefront for managing your [OpenCode](https://opencode.ai) setup. Browse a curated collection of agents, commands, skills, providers, and MCP servers — then install or remove them with a single keypress. Track multiple projects, set per-project defaults, and switch between them without leaving the TUI.
+A terminal storefront for managing your [OpenCode](https://opencode.ai) setup.
+
+`skillful` installs and uninstalls agents, commands, skills, providers, and MCP servers from one or more connected **git-backed store sources**.
 
 ## Why
 
-OpenCode supports a rich ecosystem of customizations — custom agents, slash commands, reusable skills, provider configs, and MCP server integrations — but managing them means editing JSON files and copying markdown into the right directories by hand.
+OpenCode customization is powerful, but manually managing many files across global and project scope gets noisy fast.
 
-This tool keeps a local "store" of those items in version control, tracks what's installed, and gives you a TUI to toggle them on and off — at either the global or project level. It also maintains a registry of your projects so you can quickly switch between them and keep per-project configuration.
+`skillful` gives you one keyboard-first TUI to:
 
-## What's in the store
+- connect multiple sources (personal/work/team)
+- browse merged content with deterministic priority rules
+- install or remove items globally or per-project
+- manage project targets and startup defaults
 
-| Category | Count | Format | Installed to (global) | Installed to (project) |
-|----------|-------|--------|-----------------------|------------------------|
-| **Agents** | 4 | Markdown with frontmatter | `~/.config/opencode/agents/` | `.opencode/agents/` |
-| **Commands** | 1 | Markdown with frontmatter | `~/.config/opencode/commands/` | `.opencode/commands/` |
-| **Skills** | 5 | `SKILL.md` in named folders | `~/.config/opencode/skills/<name>/` | `.opencode/skills/<name>/` |
-| **Providers** | 0 | JSON config blocks | `provider.<id>` in `~/.config/opencode/opencode.json` | `provider.<id>` in `./opencode.json` |
-| **MCP Servers** | 3 | JSON config blocks | `mcp.<id>` in `~/.config/opencode/opencode.json` | `mcp.<id>` in `./opencode.json` |
+## Source model
 
-### Agents
+Store content lives in separate repos. `skillful` caches and indexes them locally.
 
-- **architect** — Designs detailed system architectures that enable developers to implement solutions independently.
-- **brainstorm** — A brainstorming partner who helps developers explore diverse options and analyze trade-offs.
-- **epic-manager** — Translates high-level business requirements into discrete, traceable Epics ready for task breakdown.
-- **task-lead** — Breaks down approved Epics into discrete, testable Work Items.
+- Source registry: `~/.config/skillful/sources.json`
+- Source cache root: `~/.cache/skillful/sources/<sourceId>/repo`
+- Per-source cached index: `~/.cache/skillful/sources/<sourceId>/index.json`
+- Priority rule: lower number means higher priority
+- Collision rule: if multiple sources define the same `(type,id)`, highest-priority source wins
 
-### Commands
+Expected source repo format:
 
-- **/update-agents** — Updates AGENTs.md with the current session and context.
+```text
+<repo>/
+  store/
+    agents/*.md
+    commands/*.md
+    skills/<name>/SKILL.md
+    providers/*.json
+    mcps/*.json
+```
 
-### Skills
-
-- **code-comments** — Add and maintain high-quality code documentation for public APIs and complex logic
-- **conventional-commit** — Analyzes staged changes and session intent to generate and execute high-quality Conventional Commit messages
-- **create-command** — Create new custom commands following OpenCode documentation. Use when you need to create a command markdown file that users invoke with /<command-name>.
-- **create-skill** — Create new agent skills following OpenCode documentation. Use when you need to create, write, or scaffold a SKILL.md file with proper structure.
-- **ticket-commit** — Analyzes staged changes and extracts a ticket ID from the branch name to generate and execute ticket-prefixed commit messages
-
-### Providers
-
-_No providers available_
-
-### MCP Servers
-
-- **atlassian-mcp-server-jira** — Atlassian Jira MCP — remote MCP server for Jira
-- **chrome-devtools** — Chrome DevTools MCP — inspect, debug, and interact with Chrome via DevTools Protocol
-- **github-mcp** — GitHub Copilot MCP — remote MCP server via GitHub Copilot API
+`index.json` in source repos is **not required**.
 
 ## Install
 
 Requires **Node.js 22+**.
 
 ```bash
-# Clone the repo
 git clone <repo-url> skillful
 cd skillful
-
-# Run setup (installs dependencies, compiles TypeScript, links CLI globally)
 npm run setup
 ```
 
-That's it. You can now run `skillful` from anywhere.
-
-The setup script works on both macOS and Windows.
+`npm run setup` installs dependencies, builds TypeScript, and links `skillful` globally.
 
 ## Usage
 
 ```bash
-skillful                # Auto-detect view (based on settings)
-skillful manage         # Open the store management view
-skillful projects       # Open the projects view
-skillful settings       # Open the settings view
-skillful --target=X     # Override target adapter (opencode, claude-code, etc.)
+skillful
+skillful manage
+skillful projects
+skillful settings
+skillful --target=opencode
+skillful --update
 ```
 
-The TUI has three views, switchable at any time:
+- `manage`, `projects`, `settings` jump to a specific view.
+- `--target` supports: `opencode`, `claude-code`, `codex-cli`, `codex-app`.
+- `--update` re-installs all currently installed items for the current project from connected sources (run at a project root containing `.git` or `.opencode`).
 
-| View | Purpose | Switch to |
-|------|---------|-----------|
-| **Store** | Browse and install/uninstall store items | Tab from Projects, Tab from Settings |
-| **Projects** | Manage registered projects | Tab from Store, `p` from Settings |
-| **Settings** | Configure defaults (target, startup view) | `s` from Store, `s` from Projects |
+When no enabled sources exist, `skillful` starts in **Settings** so first-run setup is guided instead of empty.
 
-### Store view (manage)
+## TUI views
 
-The tool automatically detects whether you're inside a project directory (by the presence of `.git` or `.opencode`). If so, it runs in **project mode** — installs go to your project config. Otherwise, it runs in **global mode** — installs go to `~/.config/opencode/`.
+`skillful` has three views and shared tab navigation:
 
-```
- [Store] |  Projects  |  Settings
- Skillful — Store
- Target: OpenCode (opencode)
- Project: my-project (/Users/you/Projects/my-project)
+- **Store**: browse items by category and install/uninstall.
+- **Projects**: register, remove, and switch projects; set per-project target defaults.
+- **Settings**: configure app defaults and manage connected store sources.
 
-  ▸ Agents(1/4)   Commands(0/1)   Skills(0/5)   Providers(0/0)   MCPs(0/3)
- ────────────────────────────────────────────────────────────────────────
-  ▸ ✓ brainstorm — Brainstorms ideas and explores design options...
-    ◆ architect [global] — Designs detailed system architectures...
-    ○ epic-manager — Translates high-level business requirements...
-    ...
+## Key controls
 
- ┌──────────────────────────────────────────────────────┐
- │ brainstorm (agent)                                    │
- │ Brainstorms ideas and explores design options...      │
- │ Tags: primary                                         │
- │ Status: Installed (project) via file                  │
- └──────────────────────────────────────────────────────┘
+Common controls:
 
- ←/→ category  ↑/↓ navigate  Enter/Space toggle  Tab projects  s settings  q quit
- ✓ project  ◆ global only  ○ not installed
-```
+- `q` quit
+- `Tab` next view
 
-In project mode:
+Store view:
 
-- `✓` (green) — installed in the project
-- `◆` (blue) with `[global]` — installed globally but not in the project
-- `○` (gray) — not installed anywhere
+- `Left` / `Right` switch category
+- `Up` / `Down` move selection
+- `Enter` / `Space` install or uninstall selected item
 
-Pressing Enter/Space on a globally installed item adds it to the project config. Removing it from the project reveals the global state again. Global installs are never modified from project mode.
+Projects view:
 
-### Projects view
+- `Up` / `Down` move selection
+- `Enter` open selected project in Store view
+- `a` add project path
+- `d` remove selected project
+- `t` cycle selected project's default target
 
-Register, remove, and switch between projects. Each project can have its own default target adapter.
+Settings view:
 
-```
- Store  | [Projects] |  Settings
- Skillful — Projects
- Registered projects you manage with skillful
+- `Up` / `Down` move selection
+- `Enter` / `Space` cycle setting or enable/disable source
+- `a` add source URL
+- `d` remove selected source
+- `[` / `]` reorder source priority
+- `u` check selected source for updates
+- `f` fetch selected source and refresh its cached index
+- `c` check all enabled sources
 
- ────────────────────────────────────────────────────────────────────────
-  ▸ my-project [active] [opencode] — /Users/you/Projects/my-project
-    other-project — /Users/you/Projects/other-project
-    api-service [claude-code] — /Users/you/Projects/api-service
+Source changes refresh in-memory store content immediately (no restart needed).
 
- ┌──────────────────────────────────────────────────────┐
- │ my-project                                            │
- │ Path: /Users/you/Projects/my-project                  │
- │ Target: opencode                                      │
- │ Added: 4/23/2026                                      │
- └──────────────────────────────────────────────────────┘
+## Install behavior
 
- ↑/↓ navigate  Enter open project  a add  d remove  t cycle target  Tab manage  s settings  q quit
-```
+Global mode (outside a project):
 
-| Key | Action |
-|-----|--------|
-| `a` | Add a project (type the directory path) |
-| `d` | Remove the selected project from the registry |
-| `t` | Cycle the default target for the selected project |
-| `Enter` | Switch to that project's store view |
+- agents/commands -> `~/.config/opencode/agents|commands`
+- skills -> `~/.config/opencode/skills/<name>/SKILL.md`
+- providers/mcps -> merged into `~/.config/opencode/opencode.json`
 
-### Settings view
+Project mode (inside a project with `.git` or `.opencode`):
 
-Configure global defaults that persist across sessions.
+- agents/commands -> `.opencode/agents|commands`
+- skills -> `.opencode/skills/<name>/SKILL.md`
+- providers/mcps -> merged into `./opencode.json`
 
-```
- Store  |  Projects  | [Settings]
- Skillful — Settings
- Configure default behavior for skillful
+In project mode, operations affect project scope only and do not mutate global installs.
 
- ────────────────────────────────────────────────────────────────────────
-  ▸ Default Target — opencode
-      Target adapter used when --target is not specified
-    Default View — auto
+Project-mode status indicators in Store view:
 
- ┌──────────────────────────────────────────────────────┐
- │ Settings file: ~/.config/skillful/settings.json │
- └──────────────────────────────────────────────────────┘
-
- ↑/↓ navigate  Enter/Space cycle value  Tab manage  p projects  q quit
-```
-
-Available settings:
-
-| Setting | Values | Description |
-|---------|--------|-------------|
-| **Default Target** | `opencode`, `claude-code`, `codex-cli`, `codex-app` | Which target adapter to use when `--target` is not specified |
-| **Default View** | `auto`, `manage`, `projects`, `settings` | Which view to show on startup. `auto` opens manage if inside a project, projects otherwise |
-
-### Controls summary
-
-| Key | Store view | Projects view | Settings view |
-|-----|------------|---------------|---------------|
-| `←` / `→` | Switch categories | — | — |
-| `↑` / `↓` | Navigate items | Navigate projects | Navigate settings |
-| `Enter` / `Space` | Toggle install | Open project | Cycle value |
-| `Tab` | Go to Projects | Go to Store | Go to Store |
-| `s` | Go to Settings | Go to Settings | — |
-| `p` | — | — | Go to Projects |
-| `a` | — | Add project | — |
-| `d` | — | Remove project | — |
-| `t` | — | Cycle target | — |
-| `q` | Quit | Quit | Quit |
-
-### What happens when you install
-
-In **global mode** (outside a project):
-
-- **Agents, commands** — The markdown file is copied into `~/.config/opencode/agents/` or `~/.config/opencode/commands/`.
-- **Skills** — The `SKILL.md` is copied into `~/.config/opencode/skills/<name>/`.
-- **Providers** — The JSON block (minus `_meta`) is written into the `provider` object in `~/.config/opencode/opencode.json`.
-- **MCP servers** — The JSON block (minus `_meta`) is written into the `mcp` object in `~/.config/opencode/opencode.json`.
-
-In **project mode** (inside a project with `.git` or `.opencode`):
-
-- **Agents, commands** — The markdown file is copied into `.opencode/agents/` or `.opencode/commands/` in the project root.
-- **Skills** — The `SKILL.md` is copied into `.opencode/skills/<name>/` in the project root.
-- **Providers** — The JSON block (minus `_meta`) is written into `provider` in the project's `opencode.json`.
-- **MCP servers** — The JSON block (minus `_meta`) is written into `mcp` in the project's `opencode.json`.
-
-Uninstalling reverses each of these — files are deleted, JSON keys are removed. In project mode, only the project config is affected; global installs are never modified.
+- `✓` installed in project
+- `◆` installed globally only (not yet in project)
+- `○` not installed
+- `!` installed but differs from source (press Enter to overwrite)
 
 ## Config files
 
-skillful stores its own configuration separately from OpenCode:
+`skillful` keeps its own app state separate from OpenCode files:
 
-| File | Purpose |
-|------|---------|
-| `~/.config/skillful/settings.json` | Global settings (default target, default startup view) |
-| `~/.config/skillful/projects.json` | Registry of tracked projects and their per-project targets |
+- `~/.config/skillful/settings.json` - default target and startup view
+- `~/.config/skillful/projects.json` - registered projects and optional per-project targets
+- `~/.config/skillful/sources.json` - source registry, priorities, and source status metadata
 
-These are created automatically on first use.
+These files are created automatically on first use.
 
-## Adding items to the store
+## Authoring a store source
 
-### Agents
-
-Create a markdown file in `store/agents/<name>.md` with OpenCode agent frontmatter:
+Agents (`store/agents/<name>.md`):
 
 ```markdown
 ---
@@ -235,12 +155,10 @@ tools:
   write: false
 ---
 
-Your system prompt goes here.
+Your agent prompt.
 ```
 
-### Commands
-
-Create a markdown file in `store/commands/<name>.md`:
+Commands (`store/commands/<name>.md`):
 
 ```markdown
 ---
@@ -248,79 +166,40 @@ description: What this command does
 agent: build
 ---
 
-The prompt template. Use $ARGUMENTS for user input.
+Prompt template. Use $ARGUMENTS for user input.
 ```
 
-### Skills
-
-Create `store/skills/<name>/SKILL.md`:
+Skills (`store/skills/<folder>/SKILL.md`):
 
 ```markdown
 ---
 name: my-skill
-description: What this skill teaches the agent
+description: What this skill teaches
 ---
 
-Skill content here.
+Skill content.
 ```
 
-### Providers
-
-Create a JSON file in `store/providers/<name>.json`:
+Providers (`store/providers/<name>.json`) and MCPs (`store/mcps/<name>.json`) must include `_meta.description`; everything except `_meta` is treated as the install payload.
 
 ```json
 {
   "_meta": {
-    "description": "Human-readable description for the TUI",
-    "tags": ["aws", "bedrock"]
-  },
-  "options": {
-    "region": "us-east-1"
-  },
-  "models": {}
-}
-```
-
-Everything except `_meta` is the config that gets written to `opencode.json` under `provider.<name>`.
-
-### MCP Servers
-
-Create a JSON file in `store/mcps/<name>.json`:
-
-```json
-{
-  "_meta": {
-    "description": "Human-readable description for the TUI",
-    "tags": ["remote", "search"]
+    "description": "Human-readable description",
+    "tags": ["example"]
   },
   "type": "remote",
   "url": "https://example.com/mcp"
 }
 ```
 
-Everything except `_meta` is the config that gets written to `opencode.json` under `mcp.<name>`.
-
-### Rebuild the index
-
-After adding or modifying store items:
-
-```bash
-npm run index
-```
-
-This regenerates `index.json`. The TUI also rebuilds the index on the fly if `index.json` is missing.
-
 ## Development
 
 ```bash
-npm run dev       # Run the TUI via tsx (no build step needed)
-npm run build     # Compile TypeScript to dist/ (for fast production startup)
-npm run start     # Run the compiled dist/cli.js directly
-npm run index     # Rebuild the store index
-npm run setup     # Install deps, compile, and link CLI globally
+npm run dev
+npm run build
+npm run start
 ```
-
-For development, `npm run dev` uses tsx to transpile on the fly. For production use (including the global `skillful` command), run `npm run build` first — `bin/cli.js` will automatically use the compiled `dist/` output for fast startup (~300ms vs ~1-2s with tsx).
 
 ## License
 
