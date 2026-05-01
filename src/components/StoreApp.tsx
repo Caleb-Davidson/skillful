@@ -3,6 +3,8 @@ import { Box, Text, useInput, useApp } from "ink";
 import type { StoreItemMeta, StoreItemWithState, StoreItemType, StoreView, ProjectContext, TargetId, AppView } from "../lib/types.js";
 import {
   getInstalledStateForTarget,
+  getCategoryNoticeForTarget,
+  isCategoryVisibleForTarget,
   getTargetLabel,
   toggleItemForTarget,
   buildStoreViewForTarget,
@@ -182,10 +184,27 @@ function ManageView({ view, onViewChanged, onSwitchView }: ManageViewProps) {
   const isProjectMode = ctx.mode === "project";
   const targetId: TargetId = view.targetId ?? "opencode";
   const targetLabel = getTargetLabel(targetId);
+  const visibleCategories = useMemo(
+    () => CATEGORIES.filter((category) => isCategoryVisibleForTarget(category.type, targetId)),
+    [targetId]
+  );
 
-  const currentCategory = CATEGORIES[categoryIndex];
+  useEffect(() => {
+    if (visibleCategories.length === 0) {
+      setCategoryIndex(0);
+      setItemIndex(0);
+      return;
+    }
+    if (categoryIndex >= visibleCategories.length) {
+      setCategoryIndex(visibleCategories.length - 1);
+      setItemIndex(0);
+    }
+  }, [categoryIndex, visibleCategories]);
+
+  const currentCategory = visibleCategories[Math.max(0, Math.min(categoryIndex, visibleCategories.length - 1))];
   const items = useMemo(() => view[currentCategory.key] as StoreItemWithState[], [view, currentCategory.key]);
   const selectedItem = items.length > 0 ? items[itemIndex] : null;
+  const categoryNotice = getCategoryNoticeForTarget(currentCategory.type, targetId, ctx);
 
   function refreshView() {
     const refreshCategory = (list: StoreItemWithState[]): StoreItemWithState[] =>
@@ -204,15 +223,22 @@ function ManageView({ view, onViewChanged, onSwitchView }: ManageViewProps) {
   }
 
   useInput((input, key) => {
+    if (visibleCategories.length === 0) {
+      if (key.tab) {
+        onSwitchView("projects");
+      }
+      return;
+    }
+
     // Category navigation
     if (key.leftArrow || (key.shift && key.tab)) {
-      setCategoryIndex((prev) => (prev - 1 + CATEGORIES.length) % CATEGORIES.length);
+      setCategoryIndex((prev) => (prev - 1 + visibleCategories.length) % visibleCategories.length);
       setItemIndex(0);
       setMessage(null);
       return;
     }
     if (key.rightArrow) {
-      setCategoryIndex((prev) => (prev + 1) % CATEGORIES.length);
+      setCategoryIndex((prev) => (prev + 1) % visibleCategories.length);
       setItemIndex(0);
       setMessage(null);
       return;
@@ -287,7 +313,7 @@ function ManageView({ view, onViewChanged, onSwitchView }: ManageViewProps) {
 
       {/* Category tabs */}
       <Box>
-        {CATEGORIES.map((cat, i) => (
+        {visibleCategories.map((cat, i) => (
           <CategoryTab
             key={cat.key}
             label={cat.label}
@@ -305,6 +331,9 @@ function ManageView({ view, onViewChanged, onSwitchView }: ManageViewProps) {
 
       {/* Item list */}
       <Box flexDirection="column">
+        {categoryNotice && (
+          <Text color="yellow">  Note: {categoryNotice}</Text>
+        )}
         {items.length === 0 ? (
           <Text color="gray">  No {currentCategory.label.toLowerCase()} in the store.</Text>
         ) : (

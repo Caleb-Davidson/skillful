@@ -19,6 +19,10 @@ export const opencodeAdapter: TargetAdapter = {
   id: "opencode",
   label: "OpenCode",
   capabilities: OPENCODE_CAPABILITIES,
+  isItemVisible(item: StoreItemMeta): boolean {
+    if (item.type === "agent" && item.path.endsWith(".toml")) return false;
+    return true;
+  },
   getInstalledState(item: StoreItemMeta, ctx?: ProjectContext): InstalledState {
     return {
       ...getOpenCodeInstalledState(item, ctx),

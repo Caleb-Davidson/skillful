@@ -2,6 +2,7 @@ import type {
   InstalledState,
   ProjectContext,
   StoreItemMeta,
+  StoreItemType,
   StoreItemWithState,
   StoreView,
   TargetId,
@@ -14,6 +15,9 @@ const VALID_TARGETS: TargetId[] = ["opencode", "claude-code", "codex-cli", "code
 let _cachedAdapter: { id: TargetId; adapter: TargetAdapter } | null = null;
 
 function isItemVisibleForTarget(item: StoreItemMeta, targetId: TargetId): boolean {
+  const adapter = getAdapter(targetId);
+  if (adapter.isItemVisible && !adapter.isItemVisible(item)) return false;
+
   if (!item.targetIds || item.targetIds.length === 0) return true;
   return item.targetIds.includes(targetId);
 }
@@ -96,6 +100,14 @@ export function resolveTargetId(argv: string[] = process.argv.slice(2)): TargetI
 
 export function getTargetLabel(targetId: TargetId): string {
   return getAdapter(targetId).label;
+}
+
+export function getCategoryNoticeForTarget(category: StoreItemType, targetId: TargetId, ctx?: ProjectContext): string | undefined {
+  return getAdapter(targetId).getCategoryNotice?.(category, ctx);
+}
+
+export function isCategoryVisibleForTarget(category: StoreItemType, targetId: TargetId): boolean {
+  return getAdapter(targetId).isCategoryVisible?.(category) ?? true;
 }
 
 export function getInstalledStateForTarget(item: StoreItemMeta, targetId: TargetId, ctx?: ProjectContext): InstalledState {

@@ -61,21 +61,32 @@ function scanAgents(storePath: string, source?: ScanSourceMeta): StoreItemMeta[]
 
   const results: StoreItemMeta[] = [];
   for (const file of fs.readdirSync(agentsDir)) {
-    if (!file.endsWith(".md")) continue;
+    if (!file.endsWith(".md") && !file.endsWith(".toml")) continue;
     const filePath = path.join(agentsDir, file);
     const raw = fs.readFileSync(filePath, "utf-8");
-    const parsed = matter(raw);
-    const data = parsed.data as AgentFrontmatter;
-    const id = path.basename(file, ".md");
-    const targetIds = parseTargetIds(data.targets);
+    const isMarkdownAgent = file.endsWith(".md");
+    const id = path.basename(file, path.extname(file));
+
+    let description = `Agent: ${id}`;
+    let tags: string[] = [];
+    let targetIds: TargetId[] | undefined;
+
+    if (isMarkdownAgent) {
+      const parsed = matter(raw);
+      const data = parsed.data as AgentFrontmatter;
+      description = data.description ?? description;
+      tags = [data.mode ?? "subagent", ...(data.model ? [data.model.split("/")[0]] : [])];
+      targetIds = parseTargetIds(data.targets);
+    }
+
     results.push(
       attachSource(
         {
           id,
           type: "agent" as StoreItemType,
           name: id,
-          description: data.description ?? `Agent: ${id}`,
-          tags: withTargetTags([data.mode ?? "subagent", ...(data.model ? [data.model.split("/")[0]] : [])], targetIds),
+          description,
+          tags: withTargetTags(tags, targetIds),
           path: `agents/${file}`,
           storeHash: hashNormalizedText(raw),
           targetIds,

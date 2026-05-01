@@ -6,8 +6,11 @@ export interface TargetAdapter {
   id: TargetId;
   label: string;
   capabilities: CapabilityMap;
+  isCategoryVisible?(category: StoreItemType): boolean;
   getInstalledState(item: StoreItemMeta, ctx?: ProjectContext): InstalledState;
   getMismatchState?(item: StoreItemMeta, ctx?: ProjectContext): Promise<Pick<InstalledState, "mismatch" | "mismatchChecked">>;
+  isItemVisible?(item: StoreItemMeta): boolean;
+  getCategoryNotice?(category: StoreItemType, ctx?: ProjectContext): string | undefined;
   installItem(item: StoreItemMeta, ctx?: ProjectContext): void;
   uninstallItem(item: StoreItemMeta, ctx?: ProjectContext): void;
 }
