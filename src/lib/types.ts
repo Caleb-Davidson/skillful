@@ -2,7 +2,7 @@
 
 export type StoreItemType = "agent" | "command" | "skill" | "provider" | "mcp";
 
-export type TargetId = "opencode" | "claude-code" | "codex-cli" | "codex-app";
+export type TargetId = "opencode" | "claude-code" | "codex";
 export type SupportMode = "yes" | "partial" | "no";
 
 /** Whether the manager is operating at global or project level */

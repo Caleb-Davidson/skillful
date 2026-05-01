@@ -25,7 +25,7 @@ export interface ScanSourceMeta {
   root: string;
 }
 
-const VALID_TARGET_IDS: readonly TargetId[] = ["opencode", "claude-code", "codex-cli", "codex-app"];
+const VALID_TARGET_IDS: readonly TargetId[] = ["opencode", "claude-code", "codex"];
 
 function parseTargetIds(raw: unknown): TargetId[] | undefined {
   if (raw === undefined || raw === null) return undefined;

@@ -63,7 +63,7 @@ skillful --update
 ```
 
 - `manage`, `projects`, `settings` jump to a specific view.
-- `--target` supports: `opencode`, `claude-code`, `codex-cli`, `codex-app`.
+- `--target` supports: `opencode`, `claude-code`, `codex`.
 - `--update` re-installs all currently installed items for the current project from connected sources (run at a project root containing `.git` or `.opencode`).
 
 When no enabled sources exist, `skillful` starts in **Settings** so first-run setup is guided instead of empty.
@@ -166,7 +166,7 @@ Commands (`store/commands/<name>.md`):
 ---
 description: What this command does
 agent: build
-targets: [opencode, codex-cli]
+targets: [opencode, codex]
 ---
 
 Prompt template. Use $ARGUMENTS for user input.
@@ -178,13 +178,13 @@ Skills (`store/skills/<folder>/SKILL.md`):
 ---
 name: my-skill
 description: What this skill teaches
-targets: codex-app
+targets: codex
 ---
 
 Skill content.
 ```
 
-`targets` is optional for agents, commands, and skills. When present, the item is only shown for the listed targets (`opencode`, `claude-code`, `codex-cli`, `codex-app`).
+`targets` is optional for agents, commands, and skills. When present, the item is only shown for the listed targets (`opencode`, `claude-code`, `codex`).
 
 Providers (`store/providers/<name>.json`) and MCPs (`store/mcps/<name>.json`) must include `_meta.description`; everything except `_meta` is treated as the install payload.
 

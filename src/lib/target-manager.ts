@@ -9,7 +9,7 @@ import type {
 } from "./types.js";
 import type { TargetAdapter } from "./targets/shared.js";
 
-const VALID_TARGETS: TargetId[] = ["opencode", "claude-code", "codex-cli", "codex-app"];
+const VALID_TARGETS: TargetId[] = ["opencode", "claude-code", "codex"];
 
 // Lazy-loaded adapter cache — only the selected adapter is imported.
 let _cachedAdapter: { id: TargetId; adapter: TargetAdapter } | null = null;
@@ -32,13 +32,9 @@ async function loadAdapter(id: TargetId): Promise<TargetAdapter> {
       const { claudeCodeAdapter } = await import("./targets/claude-code.js");
       return claudeCodeAdapter;
     }
-    case "codex-cli": {
-      const { codexCliAdapter } = await import("./targets/codex-cli.js");
-      return codexCliAdapter;
-    }
-    case "codex-app": {
-      const { codexAppAdapter } = await import("./targets/codex-app.js");
-      return codexAppAdapter;
+    case "codex": {
+      const { codexAdapter } = await import("./targets/codex.js");
+      return codexAdapter;
     }
   }
 }

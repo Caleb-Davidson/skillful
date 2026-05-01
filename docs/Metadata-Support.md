@@ -50,8 +50,7 @@ Supported target IDs:
 
 - `opencode`
 - `claude-code`
-- `codex-cli`
-- `codex-app`
+- `codex`
 
 Accepted formats:
 
@@ -60,7 +59,7 @@ targets: opencode
 ```
 
 ```yaml
-targets: [opencode, codex-cli]
+targets: [opencode, codex]
 ```
 
 Invalid/unknown target values are ignored. If no valid values remain, the item is treated as unscoped (visible to all targets).

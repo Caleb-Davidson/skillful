@@ -9,7 +9,7 @@
  *   skillful projects     — jump to the projects view
  *
  * Options:
- *   --target <id>    Target adapter (opencode, claude-code, codex-cli, codex-app)
+ *   --target <id>    Target adapter (opencode, claude-code, codex)
  *   --update         Update installed project items from store and exit
  */
 import React from "react";

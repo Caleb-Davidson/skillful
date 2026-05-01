@@ -158,7 +158,7 @@ function supportFor(item: StoreItemMeta): Pick<InstalledState, "supported" | "su
     return {
       supported: false,
       supportMode: "no",
-      supportReason: "Codex CLI does not support custom command installs; use Skills instead.",
+      supportReason: "Codex does not support custom command installs; use Skills instead.",
     };
   }
 
@@ -166,7 +166,7 @@ function supportFor(item: StoreItemMeta): Pick<InstalledState, "supported" | "su
     return {
       supported: true,
       supportMode: "partial",
-      supportReason: "Codex CLI agent installs support only store/agents/*.toml artifacts.",
+      supportReason: "Codex agent installs support only store/agents/*.toml artifacts.",
     };
   }
 
@@ -208,12 +208,12 @@ export function installItem(item: StoreItemMeta, ctx?: ProjectContext): void {
   }
 
   if (item.type === "command") {
-    throw new Error("Codex CLI command installs are not supported yet.");
+    throw new Error("Codex command installs are not supported yet.");
   }
 
   if (item.type === "agent") {
     if (!item.path.endsWith(".toml")) {
-      throw new Error(`Codex CLI supports only .toml agents. Received: ${item.path}`);
+      throw new Error(`Codex supports only .toml agents. Received: ${item.path}`);
     }
     const destPath = getAgentDestPath(item, ctx);
     ensureParentDir(destPath);
@@ -243,7 +243,7 @@ export function installItem(item: StoreItemMeta, ctx?: ProjectContext): void {
     return;
   }
 
-  throw new Error(`Unsupported Codex CLI item type: ${item.type}`);
+  throw new Error(`Unsupported Codex item type: ${item.type}`);
 }
 
 export function uninstallItem(item: StoreItemMeta, ctx?: ProjectContext): void {
