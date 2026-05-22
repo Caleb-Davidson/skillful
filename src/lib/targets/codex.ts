@@ -12,6 +12,7 @@ const CODEX_CLI_CAPABILITIES: CapabilityMap = {
   skill: "yes",
   provider: "no",
   mcp: "yes",
+  config: "no",
 };
 
 export const codexAdapter: TargetAdapter = {
@@ -19,11 +20,12 @@ export const codexAdapter: TargetAdapter = {
   label: "Codex",
   capabilities: CODEX_CLI_CAPABILITIES,
   isCategoryVisible(category): boolean {
-    return category !== "provider";
+    return category !== "provider" && category !== "config";
   },
   isItemVisible(item: StoreItemMeta): boolean {
     if (item.type === "command") return false;
     if (item.type === "provider") return false;
+    if (item.type === "config") return false;
     if (item.type === "agent" && item.path.endsWith(".md")) return false;
     return true;
   },

@@ -13,9 +13,10 @@ const CLAUDE_CAPABILITIES: CapabilityMap = {
   skill: "yes",
   provider: "no",
   mcp: "yes",
+  config: "yes",
 };
 
-function supportFor(item: StoreItemMeta): Pick<InstalledState, "supported" | "supportMode" | "supportReason"> {
+function supportFor(item: StoreItemMeta, ctx?: ProjectContext): Pick<InstalledState, "supported" | "supportMode" | "supportReason"> {
   if (item.type === "provider") {
     return {
       supported: false,
@@ -29,6 +30,14 @@ function supportFor(item: StoreItemMeta): Pick<InstalledState, "supported" | "su
       supported: true,
       supportMode: "partial",
       supportReason: "Claude Code agent installs support only store/agents/*.md artifacts.",
+    };
+  }
+
+  if (item.type === "config" && (!ctx || ctx.mode !== "project")) {
+    return {
+      supported: true,
+      supportMode: "partial",
+      supportReason: "This config utility requires a project context; switch to a project to install.",
     };
   }
 
@@ -57,7 +66,7 @@ export const claudeCodeAdapter: TargetAdapter = {
   getInstalledState(item: StoreItemMeta, ctx?: ProjectContext): InstalledState {
     return {
       ...getClaudeInstalledState(item, ctx),
-      ...supportFor(item),
+      ...supportFor(item, ctx),
     };
   },
   async getMismatchState(item: StoreItemMeta, ctx?: ProjectContext): Promise<Pick<InstalledState, "mismatch" | "mismatchChecked">> {

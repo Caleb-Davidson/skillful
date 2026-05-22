@@ -16,6 +16,7 @@ import { parse as parseJsonc, modify, applyEdits } from "jsonc-parser";
 import type { InstalledState, ProjectContext, StoreItemMeta } from "../types.js";
 import { resolveStoreItemPath } from "../store.js";
 import { hashCanonicalJson, hashNormalizedText } from "../hash.js";
+import { CLAUDE_MD_REDIRECT_CONTENT, CLAUDE_MD_REDIRECT_ID } from "../builtins.js";
 
 const FORMAT_OPTS = { formattingOptions: { insertSpaces: true, tabSize: 2 } };
 const MCP_KEY = "mcpServers";
@@ -58,6 +59,9 @@ function getProjectMcpConfigPath(ctx: ProjectContext): string {
 }
 
 function getFileInstallPath(item: StoreItemMeta, ctx?: ProjectContext): string | null {
+  if (item.type === "config" && item.id === CLAUDE_MD_REDIRECT_ID) {
+    return ctx?.projectDir ? path.join(ctx.projectDir, "CLAUDE.md") : null;
+  }
   const baseDir = !ctx || ctx.mode === "global" ? getGlobalClaudeDir() : getProjectClaudeDir(ctx);
   if (item.type === "agent") return path.join(baseDir, "agents", `${item.id}.md`);
   if (item.type === "command") return path.join(baseDir, "commands", `${item.id}.md`);
@@ -271,7 +275,15 @@ function getInstalledMcpPayload(item: StoreItemMeta, ctx?: ProjectContext): unkn
   return section?.[item.id];
 }
 
+function isClaudeMdRedirect(item: StoreItemMeta): boolean {
+  return item.type === "config" && item.id === CLAUDE_MD_REDIRECT_ID;
+}
+
 function getGlobalInstalledState(item: StoreItemMeta): InstalledState {
+  // Config items are project-scoped; never installed at the user/global level.
+  if (item.type === "config") {
+    return { installed: false };
+  }
   const files = getGlobalFiles();
 
   if (item.type === "agent") {
@@ -304,6 +316,14 @@ function getGlobalInstalledState(item: StoreItemMeta): InstalledState {
 }
 
 function getProjectInstalledState(item: StoreItemMeta, ctx: ProjectContext): InstalledState {
+  if (isClaudeMdRedirect(item)) {
+    const filePath = path.join(ctx.projectDir!, "CLAUDE.md");
+    if (!fs.existsSync(filePath)) {
+      return { installed: false };
+    }
+    return { installed: true, installedVia: "file", mismatchChecked: false };
+  }
+
   const files = getProjectFiles(ctx);
 
   if (item.type === "agent") {
@@ -404,6 +424,12 @@ export async function getMismatchState(
 
 /** Install a store item into Claude's active config scope. */
 export function installItem(item: StoreItemMeta, ctx?: ProjectContext): void {
+  if (item.type === "config") {
+    installConfigItem(item, ctx);
+    invalidateCache();
+    return;
+  }
+
   const srcPath = resolveStoreItemPath(item);
   if (!fs.existsSync(srcPath)) {
     throw new Error(`Store item not found: ${srcPath}`);
@@ -416,6 +442,32 @@ export function installItem(item: StoreItemMeta, ctx?: ProjectContext): void {
   }
 
   invalidateCache();
+}
+
+/**
+ * Install a built-in config item. Config items have no on-disk store payload —
+ * the install action is fully described by the adapter.
+ */
+function installConfigItem(item: StoreItemMeta, ctx?: ProjectContext): void {
+  if (isClaudeMdRedirect(item)) {
+    if (!ctx || ctx.mode !== "project" || !ctx.projectDir) {
+      throw new Error("CLAUDE.md Redirect requires a project context; switch to a project to install.");
+    }
+    const filePath = path.join(ctx.projectDir, "CLAUDE.md");
+    if (fs.existsSync(filePath)) {
+      const existing = fs.readFileSync(filePath, "utf-8");
+      if (existing !== CLAUDE_MD_REDIRECT_CONTENT) {
+        throw new Error(
+          `CLAUDE.md already exists at ${filePath} with different content. Remove or back it up before installing the redirect.`
+        );
+      }
+      return; // already the redirect — nothing to do
+    }
+    fs.writeFileSync(filePath, CLAUDE_MD_REDIRECT_CONTENT, "utf-8");
+    return;
+  }
+
+  throw new Error(`Claude Code does not know how to install config item '${item.id}'.`);
 }
 
 function installItemGlobal(item: StoreItemMeta, srcPath: string): void {
@@ -508,6 +560,12 @@ function installItemProject(item: StoreItemMeta, ctx: ProjectContext, srcPath: s
 
 /** Uninstall a store item from Claude's active config scope. */
 export function uninstallItem(item: StoreItemMeta, ctx?: ProjectContext): void {
+  if (item.type === "config") {
+    uninstallConfigItem(item, ctx);
+    invalidateCache();
+    return;
+  }
+
   if (!ctx || ctx.mode === "global") {
     uninstallItemGlobal(item);
   } else {
@@ -515,6 +573,19 @@ export function uninstallItem(item: StoreItemMeta, ctx?: ProjectContext): void {
   }
 
   invalidateCache();
+}
+
+function uninstallConfigItem(item: StoreItemMeta, ctx?: ProjectContext): void {
+  if (isClaudeMdRedirect(item)) {
+    if (!ctx || ctx.mode !== "project" || !ctx.projectDir) return;
+    const filePath = path.join(ctx.projectDir, "CLAUDE.md");
+    if (!fs.existsSync(filePath)) return;
+    const existing = fs.readFileSync(filePath, "utf-8");
+    if (existing === CLAUDE_MD_REDIRECT_CONTENT) {
+      fs.unlinkSync(filePath);
+    }
+    // If content differs, leave the user's CLAUDE.md alone.
+  }
 }
 
 function uninstallItemGlobal(item: StoreItemMeta): void {

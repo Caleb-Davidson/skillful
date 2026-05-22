@@ -47,7 +47,7 @@ async function runProjectUpdate(targetId: TargetId): Promise<number> {
   }
 
   const view = buildStoreViewForTarget(loaded.items, targetId, ctx);
-  const items = [...view.agents, ...view.commands, ...view.skills, ...view.providers, ...view.mcps];
+  const items = [...view.agents, ...view.commands, ...view.skills, ...view.providers, ...view.mcps, ...view.configs];
 
   const updatable = items.filter((item) => {
     const supportMode = item.state.supportMode ?? "yes";

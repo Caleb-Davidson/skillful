@@ -13,14 +13,19 @@ const OPENCODE_CAPABILITIES: CapabilityMap = {
   skill: "yes",
   provider: "yes",
   mcp: "yes",
+  config: "no",
 };
 
 export const opencodeAdapter: TargetAdapter = {
   id: "opencode",
   label: "OpenCode",
   capabilities: OPENCODE_CAPABILITIES,
+  isCategoryVisible(category): boolean {
+    return category !== "config";
+  },
   isItemVisible(item: StoreItemMeta): boolean {
     if (item.type === "agent" && item.path.endsWith(".toml")) return false;
+    if (item.type === "config") return false;
     return true;
   },
   getInstalledState(item: StoreItemMeta, ctx?: ProjectContext): InstalledState {

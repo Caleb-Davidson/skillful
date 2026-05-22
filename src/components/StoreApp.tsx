@@ -90,6 +90,7 @@ function DetailPanel({ item, isProjectMode }: DetailPanelProps) {
     skill: "skill",
     provider: "provider",
     mcp: "mcp server",
+    config: "config",
   };
 
   const isGlobalOnly = isProjectMode && !item.state.installed && item.state.globalInstalled;
@@ -166,13 +167,14 @@ interface ManageViewProps {
   onSwitchView: (view: AppView) => void;
 }
 
-type Category = "agents" | "commands" | "skills" | "providers" | "mcps";
+type Category = "agents" | "commands" | "skills" | "providers" | "mcps" | "configs";
 const CATEGORIES: { key: Category; label: string; type: StoreItemType }[] = [
   { key: "agents", label: "Agents", type: "agent" },
   { key: "commands", label: "Commands", type: "command" },
   { key: "skills", label: "Skills", type: "skill" },
   { key: "providers", label: "Providers", type: "provider" },
   { key: "mcps", label: "MCPs", type: "mcp" },
+  { key: "configs", label: "Config", type: "config" },
 ];
 
 function ManageView({ view, onViewChanged, onSwitchView }: ManageViewProps) {
@@ -216,6 +218,7 @@ function ManageView({ view, onViewChanged, onSwitchView }: ManageViewProps) {
       skills: refreshCategory(view.skills),
       providers: refreshCategory(view.providers),
       mcps: refreshCategory(view.mcps),
+      configs: refreshCategory(view.configs),
       context: ctx,
       targetId,
     };
@@ -402,12 +405,13 @@ export default function StoreApp({ initialView, initialAppView = "manage" }: Sto
 
   useEffect(() => {
     const targetId = storeView.targetId ?? "opencode";
-    const categories: Array<keyof Pick<StoreView, "agents" | "commands" | "skills" | "providers" | "mcps">> = [
+    const categories: Array<keyof Pick<StoreView, "agents" | "commands" | "skills" | "providers" | "mcps" | "configs">> = [
       "agents",
       "commands",
       "skills",
       "providers",
       "mcps",
+      "configs",
     ];
 
     const hasPendingChecks = categories.some((category) =>

@@ -1,6 +1,6 @@
 // Types for the skillful store
 
-export type StoreItemType = "agent" | "command" | "skill" | "provider" | "mcp";
+export type StoreItemType = "agent" | "command" | "skill" | "provider" | "mcp" | "config";
 
 export type TargetId = "opencode" | "claude-code" | "codex";
 export type SupportMode = "yes" | "partial" | "no";
@@ -147,6 +147,8 @@ export interface StoreView {
   skills: StoreItemWithState[];
   providers: StoreItemWithState[];
   mcps: StoreItemWithState[];
+  /** Built-in or target-specific configuration utilities (e.g. CLAUDE.md redirect) */
+  configs: StoreItemWithState[];
   /** The active project/global context */
   context: ProjectContext;
   /** Active target adapter */

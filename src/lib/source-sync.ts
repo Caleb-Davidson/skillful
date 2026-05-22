@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { getBuiltinStoreItems } from "./builtins.js";
 import { buildIndexFromStorePath, mergeIndexesBySourcePriority } from "./store.js";
 import {
   ensureSourceDirectories,
@@ -227,9 +228,10 @@ export async function fetchSourceAndReindex(source: StoreSource): Promise<StoreS
 export async function loadMergedIndexFromConfiguredSources(): Promise<{ index: StoreIndex; sources: StoreSource[] }> {
   const registry = loadSourceRegistry();
   const enabled = registry.sources.filter((source) => source.enabled).sort((a, b) => a.priority - b.priority);
+  const builtinItems = getBuiltinStoreItems();
 
   if (enabled.length === 0) {
-    return { index: { version: 3, items: [] }, sources: registry.sources };
+    return { index: { version: 3, items: [...builtinItems] }, sources: registry.sources };
   }
 
   const refreshedSources: StoreSource[] = [];
@@ -251,7 +253,10 @@ export async function loadMergedIndexFromConfiguredSources(): Promise<{ index: S
   saveSources(mergedSources);
 
   const mergedIndex = mergeIndexesBySourcePriority(indexEntries);
-  return { index: mergedIndex, sources: mergedSources };
+  return {
+    index: { ...mergedIndex, items: [...builtinItems, ...mergedIndex.items] },
+    sources: mergedSources,
+  };
 }
 
 export async function checkSourceForUpdate(source: StoreSource): Promise<{ source: StoreSource; status: SourceUpdateStatus }> {
