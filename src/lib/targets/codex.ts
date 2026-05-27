@@ -3,8 +3,10 @@ import {
   getInstalledState as getCodexInstalledState,
   installItem as installCodexItem,
   uninstallItem as uninstallCodexItem,
+  listInstalledArtifactsByCategory as listCodexArtifacts,
+  installArtifactFromContent as installCodexArtifact,
 } from "./codex-store.js";
-import type { CapabilityMap, TargetAdapter } from "./shared.js";
+import type { CapabilityMap, InstalledArtifact, SyncCategory, SyncInstallInput, SyncSupport, TargetAdapter } from "./shared.js";
 
 const CODEX_CLI_CAPABILITIES: CapabilityMap = {
   agent: "yes",
@@ -48,5 +50,26 @@ export const codexAdapter: TargetAdapter = {
   },
   uninstallItem(item: StoreItemMeta, ctx?: ProjectContext): void {
     uninstallCodexItem(item, ctx);
+  },
+  agentFormat: "toml",
+  syncSupport(category: SyncCategory, ctx: ProjectContext): SyncSupport {
+    if (category === "agent") return { ok: true };
+    if (category === "command") {
+      return { ok: false, notice: "Codex does not support commands; skipped for codex." };
+    }
+    // skill
+    if (ctx.mode === "project") {
+      return {
+        ok: false,
+        notice: "Codex installs skills globally only; skipped in project sync. Run sync without a project to mirror skills globally.",
+      };
+    }
+    return { ok: true };
+  },
+  listInstalledArtifacts(category: SyncCategory, ctx: ProjectContext): InstalledArtifact[] {
+    return listCodexArtifacts(category, ctx);
+  },
+  installArtifact(input: SyncInstallInput, ctx: ProjectContext): void {
+    installCodexArtifact(input, ctx);
   },
 };

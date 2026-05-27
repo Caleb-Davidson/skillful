@@ -97,3 +97,51 @@ Why:
 - collaborators on the same repo share the same target set without re-configuring,
 - avoids conflating per-user preferences (registry) with shared project intent,
 - keeps the per-user registry's optional `defaultTarget` available as a single-target override path.
+
+## Sync is additive only
+
+Decision:
+
+- `skillful sync` only adds missing copies of user-authored custom items across configured targets. It never deletes or renames.
+
+Why:
+
+- additive operations cannot lose work users explicitly hand-authored,
+- pruning is a distinct operation that needs its own UX (rename detection, "are you sure", undo) and is deferred,
+- keeps the v1 mental model simple: sync brings other targets up to the union, nothing more.
+
+## Sync refuses on content conflicts
+
+Decision:
+
+- When the same `(type, id)` exists in more than one configured target with diverging content, sync refuses to write and reports the conflict.
+
+Why:
+
+- a "lead target wins" default would silently overwrite hand-authored work,
+- divergence is surfaced exactly when the user has the context to resolve it,
+- the report applies both to "missing in some, divergent in others" and "present everywhere, contents differ" cases, so drift never accumulates unnoticed.
+
+## Sync requires multi-target config and rejects --target
+
+Decision:
+
+- `skillful sync` only runs in projects whose root contains `skillful.targets.json` with at least two targets, and is incompatible with the `--target` flag.
+
+Why:
+
+- `--target` forces single-target mode, which makes sync a no-op,
+- per-user multi-target overrides are not a shared decision the way `skillful.targets.json` is, so they are not a safe basis for an operation that writes into project files,
+- this keeps sync's contract obvious: it operates on the same target set the project itself opted into.
+
+## Sync converts agent formats with lossy field carryover
+
+Decision:
+
+- When sync copies a custom agent between markdown-targets (Claude Code, OpenCode) and the TOML-target (Codex), it converts the file. The `tools` and `model` fields are carried verbatim, and a warning notes that those vocabularies differ per target.
+
+Why:
+
+- portable fields (`description`, body / `instructions`) translate cleanly and cover most of what an agent is,
+- dropping `tools` and `model` silently would lose structure the user can fix in one edit; keeping them with a warning preserves intent without claiming correctness,
+- store-shipped agents are never auto-converted — the store ships paired artifacts for those — so the lossy path is scoped to user-authored customs.

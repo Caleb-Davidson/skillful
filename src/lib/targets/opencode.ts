@@ -4,8 +4,10 @@ import {
   getMismatchState as getOpenCodeMismatchState,
   installItem as installOpenCodeItem,
   uninstallItem as uninstallOpenCodeItem,
+  listInstalledArtifactsByCategory as listOpenCodeArtifacts,
+  installArtifactFromContent as installOpenCodeArtifact,
 } from "./opencode-store.js";
-import type { CapabilityMap, TargetAdapter } from "./shared.js";
+import type { CapabilityMap, InstalledArtifact, SyncCategory, SyncInstallInput, SyncSupport, TargetAdapter } from "./shared.js";
 
 const OPENCODE_CAPABILITIES: CapabilityMap = {
   agent: "yes",
@@ -43,5 +45,18 @@ export const opencodeAdapter: TargetAdapter = {
   },
   uninstallItem(item: StoreItemMeta, ctx?: ProjectContext): void {
     uninstallOpenCodeItem(item, ctx);
+  },
+  agentFormat: "md",
+  syncSupport(category: SyncCategory): SyncSupport {
+    if (category === "agent" || category === "command" || category === "skill") {
+      return { ok: true };
+    }
+    return { ok: false };
+  },
+  listInstalledArtifacts(category: SyncCategory, ctx: ProjectContext): InstalledArtifact[] {
+    return listOpenCodeArtifacts(category, ctx);
+  },
+  installArtifact(input: SyncInstallInput, ctx: ProjectContext): void {
+    installOpenCodeArtifact(input, ctx);
   },
 };

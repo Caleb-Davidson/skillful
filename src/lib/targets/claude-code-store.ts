@@ -558,6 +558,81 @@ function installItemProject(item: StoreItemMeta, ctx: ProjectContext, srcPath: s
   throw new Error(`Claude Code does not support installing items of type '${item.type}'.`);
 }
 
+// ── Sync primitives ─────────────────────────────────────────────────────────
+
+/** Absolute base dir for the active scope ('global' uses ~/.claude). */
+function getActiveBaseDir(ctx?: ProjectContext): string {
+  return !ctx || ctx.mode === "global" ? getGlobalClaudeDir() : getProjectClaudeDir(ctx);
+}
+
+export function listInstalledArtifactsByCategory(
+  category: "agent" | "command" | "skill",
+  ctx?: ProjectContext
+): { id: string; path: string; format?: "md" | "toml" }[] {
+  const baseDir = getActiveBaseDir(ctx);
+  if (category === "agent") {
+    const dir = path.join(baseDir, "agents");
+    if (!fs.existsSync(dir)) return [];
+    return fs
+      .readdirSync(dir)
+      .filter((f) => f.endsWith(".md"))
+      .map((f) => ({ id: path.basename(f, ".md"), path: path.join(dir, f), format: "md" as const }));
+  }
+  if (category === "command") {
+    const dir = path.join(baseDir, "commands");
+    if (!fs.existsSync(dir)) return [];
+    return fs
+      .readdirSync(dir)
+      .filter((f) => f.endsWith(".md"))
+      .map((f) => ({ id: path.basename(f, ".md"), path: path.join(dir, f) }));
+  }
+  // skill
+  const dir = path.join(baseDir, "skills");
+  if (!fs.existsSync(dir)) return [];
+  return fs
+    .readdirSync(dir, { withFileTypes: true })
+    .filter((d) => d.isDirectory())
+    .filter((d) => fs.existsSync(path.join(dir, d.name, "SKILL.md")))
+    .map((d) => ({ id: d.name, path: path.join(dir, d.name) }));
+}
+
+/** Write a synced artifact from explicit content (file) or a source directory (skill). */
+export function installArtifactFromContent(
+  input: {
+    id: string;
+    type: "agent" | "command" | "skill";
+    content?: string;
+    srcDir?: string;
+  },
+  ctx?: ProjectContext
+): void {
+  const baseDir = getActiveBaseDir(ctx);
+  if (input.type === "agent") {
+    if (input.content === undefined) throw new Error(`Agent '${input.id}' missing content.`);
+    const destDir = path.join(baseDir, "agents");
+    fs.mkdirSync(destDir, { recursive: true });
+    fs.writeFileSync(path.join(destDir, `${input.id}.md`), input.content, "utf-8");
+    invalidateCache();
+    return;
+  }
+  if (input.type === "command") {
+    if (input.content === undefined) throw new Error(`Command '${input.id}' missing content.`);
+    const destDir = path.join(baseDir, "commands");
+    fs.mkdirSync(destDir, { recursive: true });
+    fs.writeFileSync(path.join(destDir, `${input.id}.md`), input.content, "utf-8");
+    invalidateCache();
+    return;
+  }
+  if (input.type === "skill") {
+    if (!input.srcDir) throw new Error(`Skill '${input.id}' missing srcDir.`);
+    const destDir = path.join(baseDir, "skills", input.id);
+    fs.mkdirSync(destDir, { recursive: true });
+    fs.cpSync(input.srcDir, destDir, { recursive: true });
+    invalidateCache();
+    return;
+  }
+}
+
 /** Uninstall a store item from Claude's active config scope. */
 export function uninstallItem(item: StoreItemMeta, ctx?: ProjectContext): void {
   if (item.type === "config") {

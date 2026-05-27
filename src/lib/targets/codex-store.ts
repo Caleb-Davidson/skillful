@@ -246,6 +246,61 @@ export function installItem(item: StoreItemMeta, ctx?: ProjectContext): void {
   throw new Error(`Unsupported Codex item type: ${item.type}`);
 }
 
+// ── Sync primitives ─────────────────────────────────────────────────────────
+
+export function listInstalledArtifactsByCategory(
+  category: "agent" | "command" | "skill",
+  ctx?: ProjectContext
+): { id: string; path: string; format?: "md" | "toml" }[] {
+  if (category === "command") return [];
+  if (category === "agent") {
+    const baseDir = !ctx || ctx.mode === "global" ? getGlobalCodexDir() : getProjectCodexDir(ctx);
+    const dir = path.join(baseDir, "agents");
+    if (!fs.existsSync(dir)) return [];
+    return fs
+      .readdirSync(dir)
+      .filter((f) => f.endsWith(".toml"))
+      .map((f) => ({ id: path.basename(f, ".toml"), path: path.join(dir, f), format: "toml" as const }));
+  }
+  // skill — global-only.
+  const dir = path.join(getGlobalCodexDir(), "skills");
+  if (!fs.existsSync(dir)) return [];
+  return fs
+    .readdirSync(dir, { withFileTypes: true })
+    .filter((d) => d.isDirectory())
+    .filter((d) => fs.existsSync(path.join(dir, d.name, "SKILL.md")))
+    .map((d) => ({ id: d.name, path: path.join(dir, d.name) }));
+}
+
+export function installArtifactFromContent(
+  input: {
+    id: string;
+    type: "agent" | "command" | "skill";
+    content?: string;
+    srcDir?: string;
+  },
+  ctx?: ProjectContext
+): void {
+  if (input.type === "command") {
+    throw new Error("Codex does not support custom commands.");
+  }
+  if (input.type === "agent") {
+    if (input.content === undefined) throw new Error(`Agent '${input.id}' missing content.`);
+    const baseDir = !ctx || ctx.mode === "global" ? getGlobalCodexDir() : getProjectCodexDir(ctx);
+    const destPath = path.join(baseDir, "agents", `${input.id}.toml`);
+    ensureParentDir(destPath);
+    fs.writeFileSync(destPath, input.content, "utf-8");
+    return;
+  }
+  if (input.type === "skill") {
+    if (!input.srcDir) throw new Error(`Skill '${input.id}' missing srcDir.`);
+    const destDir = getSkillDestDir({ id: input.id } as StoreItemMeta);
+    fs.mkdirSync(destDir, { recursive: true });
+    fs.cpSync(input.srcDir, destDir, { recursive: true });
+    return;
+  }
+}
+
 export function uninstallItem(item: StoreItemMeta, ctx?: ProjectContext): void {
   if (item.type === "command") return;
 

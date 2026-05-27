@@ -3,15 +3,18 @@
  * skillful CLI entry point.
  * Launches the TUI storefront for managing OpenCode agents, commands, and skills.
  *
- * Supports two startup modes via subcommands:
+ * Supports startup modes via subcommands:
  *   skillful              — auto-detect (default view from settings)
  *   skillful manage       — jump to the store management view
  *   skillful projects     — jump to the projects view
+ *   skillful sync         — mirror custom items across configured targets
  *
  * Options:
  *   --target <id>    Target adapter (opencode, claude-code, codex). Forces
- *                    single-target mode for the session.
+ *                    single-target mode for the session. Incompatible with `sync`.
  *   --update         Update installed project items from store and exit.
+ *   --yes            Auto-confirm batched prompts (sync).
+ *   --dry-run        Plan only, do not write (sync).
  *
  * Multi-target mode: a project that opts in by committing
  *   skillful.targets.json   { "targets": ["claude-code", "opencode"] }
@@ -32,9 +35,57 @@ import { loadProjectTargets } from "./lib/project-targets.js";
 import { loadMergedIndexFromConfiguredSources } from "./lib/source-sync.js";
 import type { TargetId, AppView, StoreSource, StoreItemMeta } from "./lib/types.js";
 import StoreApp from "./components/StoreApp.js";
+import { runSync } from "./lib/sync-cli.js";
+import type { TargetAdapter } from "./lib/targets/shared.js";
 
 function hasUpdateFlag(argv: string[] = process.argv.slice(2)): boolean {
   return argv.includes("--update");
+}
+
+function hasSyncSubcommand(argv: string[] = process.argv.slice(2)): boolean {
+  for (const arg of argv) {
+    if (arg.startsWith("--")) continue;
+    return arg === "sync";
+  }
+  return false;
+}
+
+function hasFlag(name: string, argv: string[] = process.argv.slice(2)): boolean {
+  return argv.includes(name);
+}
+
+function hasTargetFlag(argv: string[] = process.argv.slice(2)): boolean {
+  return argv.some((arg) => arg === "--target" || arg.startsWith("--target="));
+}
+
+async function runSyncSubcommand(): Promise<number> {
+  if (hasTargetFlag()) {
+    console.error("`skillful sync` is incompatible with --target. Sync uses the targets declared in skillful.targets.json.");
+    return 1;
+  }
+  const ctx = detectExactProjectContext();
+  if (ctx.mode !== "project") {
+    console.error("`skillful sync` must be run from a project root (contains .git or .opencode).");
+    return 1;
+  }
+  const projectTargets = ctx.projectDir ? loadProjectTargets(ctx.projectDir) : null;
+  if (!projectTargets || projectTargets.length < 2) {
+    console.error("`skillful sync` requires skillful.targets.json at the project root listing at least 2 targets.");
+    return 1;
+  }
+  const adapters = await initAdapters(projectTargets);
+  const adapterMap = {
+    get(id: TargetId): TargetAdapter {
+      const idx = projectTargets.indexOf(id);
+      if (idx === -1) throw new Error(`No adapter loaded for target '${id}'.`);
+      return adapters[idx];
+    },
+  };
+  const loaded = await loadEffectiveIndex();
+  return runSync(projectTargets, ctx, loaded.items, adapterMap, {
+    yes: hasFlag("--yes"),
+    dryRun: hasFlag("--dry-run"),
+  });
 }
 
 async function loadEffectiveIndex(): Promise<{ items: StoreItemMeta[]; sources: StoreSource[] }> {
@@ -92,6 +143,7 @@ function parseSubcommand(argv: string[]): AppView | null {
     if (arg === "manage") return "manage";
     if (arg === "projects") return "projects";
     if (arg === "settings") return "settings";
+    // `sync` is handled separately before main()'s TUI path.
     break;
   }
   return null;
@@ -128,6 +180,11 @@ function resolveStartupTargets(
 }
 
 async function main() {
+  if (hasSyncSubcommand()) {
+    const code = await runSyncSubcommand();
+    process.exit(code);
+  }
+
   const settings = loadSettings();
 
   let forcedFlag: TargetId | null = null;

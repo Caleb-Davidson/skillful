@@ -14,6 +14,7 @@ Before working on any system, you **MUST** read the relevant architecture docume
 - **[Target Adapter Architecture](docs/Targets.md)**: Why adapter abstraction exists and how target capability differences are handled.
 - **[Project Context Architecture](docs/Projects.md)**: Project detection/registry intent and project-specific behavior boundaries.
 - **[Settings Architecture](docs/Settings.md)**: Defaults, source management intent, persistence boundaries, and first-run UX.
+- **[Sync Architecture](docs/Sync.md)**: Mirroring user-authored custom items across configured targets, conflict policy, and agent format conversion.
 - **[Architecture Decisions](docs/Decisions.md)**: Durable decisions and the rationale behind them.
 - **[Operational Playbook](docs/Operational-Playbook.md)**: Failure modes, expected behavior, and maintenance guidance.
 
@@ -36,6 +37,8 @@ src/
     store.ts                 # scan store directories + merge by priority
     target-manager.ts        # adapter selection, multi-target rollup, install fan-out
     project-targets.ts       # loads project-local skillful.targets.json
+    agent-format.ts          # MD ↔ TOML agent conversion (used by sync)
+    sync.ts                  # discovery, conflict detection, mirror execution
     targets/
       opencode-store.ts      # install/uninstall/read/write for OpenCode
       *.ts                   # target adapters

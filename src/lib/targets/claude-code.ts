@@ -4,8 +4,10 @@ import {
   getMismatchState as getClaudeMismatchState,
   installItem as installClaudeItem,
   uninstallItem as uninstallClaudeItem,
+  listInstalledArtifactsByCategory as listClaudeArtifacts,
+  installArtifactFromContent as installClaudeArtifact,
 } from "./claude-code-store.js";
-import type { CapabilityMap, TargetAdapter } from "./shared.js";
+import type { CapabilityMap, InstalledArtifact, SyncCategory, SyncInstallInput, SyncSupport, TargetAdapter } from "./shared.js";
 
 const CLAUDE_CAPABILITIES: CapabilityMap = {
   agent: "yes",
@@ -77,5 +79,18 @@ export const claudeCodeAdapter: TargetAdapter = {
   },
   uninstallItem(item: StoreItemMeta, ctx?: ProjectContext): void {
     uninstallClaudeItem(item, ctx);
+  },
+  agentFormat: "md",
+  syncSupport(category: SyncCategory): SyncSupport {
+    if (category === "agent" || category === "command" || category === "skill") {
+      return { ok: true };
+    }
+    return { ok: false };
+  },
+  listInstalledArtifacts(category: SyncCategory, ctx: ProjectContext): InstalledArtifact[] {
+    return listClaudeArtifacts(category, ctx);
+  },
+  installArtifact(input: SyncInstallInput, ctx: ProjectContext): void {
+    installClaudeArtifact(input, ctx);
   },
 };

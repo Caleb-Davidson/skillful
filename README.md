@@ -60,11 +60,13 @@ skillful projects
 skillful settings
 skillful --target=opencode
 skillful --update
+skillful sync
 ```
 
 - `manage`, `projects`, `settings` jump to a specific view.
 - `--target` supports: `opencode`, `claude-code`, `codex`.
 - `--update` re-installs all currently installed items for the current project from connected sources (run at a project root containing `.git` or `.opencode`).
+- `sync` mirrors user-authored custom agents, commands, and skills across the targets in `skillful.targets.json` (see [Sync](#sync)).
 
 When no enabled sources exist, `skillful` starts in **Settings** so first-run setup is guided instead of empty.
 
@@ -91,6 +93,27 @@ Precedence when choosing targets:
 3. Project registry per-project `defaultTarget` (set with `t` in the Projects view)
 4. User-settings `defaultTarget`
 5. Built-in fallback (`opencode`)
+
+## Sync
+
+`skillful sync` mirrors user-authored custom items (agents, commands, skills) across every target listed in `skillful.targets.json`. It only touches items whose ids are not in the merged store index — store items are managed through the regular install flow.
+
+```bash
+skillful sync           # interactive
+skillful sync --yes     # auto-confirm safe mirrors (conflicts still reported)
+skillful sync --dry-run # plan only, no writes
+```
+
+Rules:
+
+- Requires a project root with `skillful.targets.json` listing at least two targets. Incompatible with `--target`.
+- **Additive only.** Sync never deletes or renames; pruning is a separate operation.
+- **Refuse + report on conflict.** When the same item exists in more than one target with different content, sync reports it and does not write. Resolve the divergence by hand and re-run.
+- **Agent format conversion.** Sync converts agent files between markdown (Claude Code, OpenCode) and TOML (Codex). The `tools` and `model` fields are copied verbatim — sync warns that those vocabularies differ per target and the converted file usually needs a manual edit before use.
+- **Codex caveats.** Codex commands are unsupported (skipped). Codex skills are global-only, so they are skipped during project sync with a notice. Codex agents are TOML; conversion is required to/from markdown targets.
+- **JSON-installed customs.** OpenCode's `opencode.json` `agent`/`command` blocks are not considered in v1. Author file-based customs (`.opencode/{agents,commands}/<id>.md`) to participate in sync.
+
+See [docs/Sync.md](docs/Sync.md) for the full architecture.
 
 ## TUI views
 
