@@ -115,6 +115,27 @@ export interface McpStoreFile {
   [key: string]: unknown;
 }
 
+/**
+ * Rollup status across one or more configured targets.
+ * In single-target mode the values collapse to: installed, older-version, not-installed, unsupported.
+ * "missing-in-some" only appears in multi-target mode.
+ */
+export type MultiInstalledStatus =
+  | "installed"
+  | "missing-in-some"
+  | "older-version"
+  | "not-installed"
+  | "unsupported";
+
+/** Per-target view used by the multi-target rollup. */
+export interface PerTargetState {
+  targetId: TargetId;
+  /** True when the target supports installing this item (visibility + capability). */
+  eligible: boolean;
+  /** Raw per-target install state (only meaningful when eligible). */
+  state: InstalledState;
+}
+
 /** Represents an item's install state */
 export interface InstalledState {
   /** Whether this item is installed in the active scope (project if in project mode, global otherwise) */
@@ -133,6 +154,14 @@ export interface InstalledState {
   mismatch?: boolean;
   /** Whether mismatch detection has completed */
   mismatchChecked?: boolean;
+  /** Multi-target rollup status. Always populated when produced by buildStoreViewForTargets. */
+  status?: MultiInstalledStatus;
+  /** Per-target breakdown. Populated for multi-target views only. */
+  perTarget?: PerTargetState[];
+  /** Configured targets that support this item (subset of view targetIds). */
+  eligibleTargets?: TargetId[];
+  /** Configured targets that report this item as installed. Subset of eligibleTargets. */
+  installedTargets?: TargetId[];
 }
 
 /** A store item combined with its installed state */
@@ -151,8 +180,16 @@ export interface StoreView {
   configs: StoreItemWithState[];
   /** The active project/global context */
   context: ProjectContext;
-  /** Active target adapter */
+  /**
+   * Active target adapter.
+   * Kept for back-compat; mirrors targetIds[0]. Prefer `targetIds`.
+   */
   targetId?: TargetId;
+  /**
+   * Active target adapters in priority order (1+ entries).
+   * length > 1 indicates multi-target mode (driven by skillful.targets.json).
+   */
+  targetIds?: TargetId[];
 }
 
 // ── Multi-view app types ──

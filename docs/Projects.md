@@ -33,3 +33,7 @@ It allows users to:
 - Entering a project should auto-register it when appropriate.
 - Removing a project should affect only registry metadata.
 - Project mode operations should mutate project scope only.
+
+## Project-local multi-target
+
+A project may declare a multi-target selection by committing `skillful.targets.json` at its root. This file is checked in with the repo and shared with collaborators, separate from the per-user project registry. See [Targets](Targets.md) for the rollup and installation semantics.

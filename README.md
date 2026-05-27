@@ -68,6 +68,30 @@ skillful --update
 
 When no enabled sources exist, `skillful` starts in **Settings** so first-run setup is guided instead of empty.
 
+## Multi-target projects
+
+A single project can install the same items across multiple toolchains (e.g. Claude Code and OpenCode) by committing `skillful.targets.json` at its root:
+
+```json
+{ "targets": ["claude-code", "opencode"] }
+```
+
+When this file is present (and `--target` is not passed):
+
+- The Store view shows the **superset** of items eligible for any configured target.
+- Each row reports a rollup status: `installed`, `missing-in-some`, `older-version`, `not-installed`, or `unsupported`.
+- Install and uninstall are **atomic across every eligible target** — there's no per-target toggle in the UI.
+- Items only some configured targets can install are still shown, badged with the targets they apply to (e.g. `[opencode only]`).
+- The detail panel shows the per-target breakdown for transparency.
+
+Precedence when choosing targets:
+
+1. `--target <id>` flag (forces single-target and locks the session)
+2. `skillful.targets.json` at the active project root
+3. Project registry per-project `defaultTarget` (set with `t` in the Projects view)
+4. User-settings `defaultTarget`
+5. Built-in fallback (`opencode`)
+
 ## TUI views
 
 `skillful` has three views and shared tab navigation:
@@ -126,12 +150,14 @@ Project mode (inside a project with `.git` or `.opencode`):
 
 In project mode, operations affect project scope only and do not mutate global installs.
 
-Project-mode status indicators in Store view:
+Store view status indicators:
 
-- `✓` installed in project
-- `◆` installed globally only (not yet in project)
+- `✓` installed
 - `○` not installed
 - `!` installed but differs from source (press Enter to overwrite)
+- `◆` installed globally only — project mode, not yet in project
+- `◐` multi-target: installed in some configured targets, missing in others (press Enter to install everywhere)
+- `×` unsupported by every configured target
 
 ## Config files
 

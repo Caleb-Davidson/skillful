@@ -34,7 +34,8 @@ src/
     source-sync.ts           # clone/fetch/check/index for git sources
     sources.ts               # source registry persistence and helpers
     store.ts                 # scan store directories + merge by priority
-    target-manager.ts        # adapter selection and state building
+    target-manager.ts        # adapter selection, multi-target rollup, install fan-out
+    project-targets.ts       # loads project-local skillful.targets.json
     targets/
       opencode-store.ts      # install/uninstall/read/write for OpenCode
       *.ts                   # target adapters

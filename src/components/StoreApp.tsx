@@ -1,15 +1,27 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Box, Text, useInput, useApp } from "ink";
-import type { StoreItemMeta, StoreItemWithState, StoreItemType, StoreView, ProjectContext, TargetId, AppView } from "../lib/types.js";
+import type {
+  StoreItemMeta,
+  StoreItemWithState,
+  StoreItemType,
+  StoreView,
+  ProjectContext,
+  TargetId,
+  AppView,
+  MultiInstalledStatus,
+  PerTargetState,
+} from "../lib/types.js";
 import {
-  getInstalledStateForTarget,
-  getCategoryNoticeForTarget,
-  isCategoryVisibleForTarget,
+  getCategoryNoticeForTargets,
   getTargetLabel,
-  toggleItemForTarget,
-  buildStoreViewForTarget,
-  enrichStoreViewMismatchForTarget,
+  getTargetSelectionLabel,
+  isCategoryVisibleForTargets,
+  toggleItemForTargets,
+  buildStoreViewForTargets,
+  enrichStoreViewMismatchForTargets,
+  initAdapters,
 } from "../lib/target-manager.js";
+import { loadProjectTargets } from "../lib/project-targets.js";
 import { checkEnabledSourcesForUpdates, loadMergedIndexFromConfiguredSources } from "../lib/source-sync.js";
 import { addProject } from "../lib/projects.js";
 import ProjectsView from "./ProjectsView.js";
@@ -38,21 +50,64 @@ function CategoryTab({ label, count, installedCount, active }: CategoryTabProps)
   );
 }
 
+/** Map the rollup status to a (glyph, color, badge text) tuple for the row. */
+function statusGlyph(status: MultiInstalledStatus | undefined, fallbackInstalled: boolean): {
+  glyph: string;
+  color: string;
+} {
+  switch (status) {
+    case "installed":
+      return { glyph: "✓", color: "green" };
+    case "older-version":
+      return { glyph: "!", color: "yellow" };
+    case "missing-in-some":
+      return { glyph: "◐", color: "blue" };
+    case "unsupported":
+      return { glyph: "×", color: "red" };
+    case "not-installed":
+      return { glyph: "○", color: "gray" };
+    default:
+      // Pre-status legacy: fall back to installed boolean.
+      return fallbackInstalled
+        ? { glyph: "✓", color: "green" }
+        : { glyph: "○", color: "gray" };
+  }
+}
+
+function statusLabel(status: MultiInstalledStatus | undefined): string | null {
+  switch (status) {
+    case "missing-in-some":
+      return "missing in some";
+    case "older-version":
+      return "older version";
+    case "unsupported":
+      return "unsupported";
+    default:
+      return null;
+  }
+}
+
 interface ItemRowProps {
   item: StoreItemWithState;
   selected: boolean;
   isProjectMode: boolean;
+  configuredTargetCount: number;
 }
 
-function ItemRow({ item, selected, isProjectMode }: ItemRowProps) {
+function ItemRow({ item, selected, isProjectMode, configuredTargetCount }: ItemRowProps) {
   const isGlobalOnly = isProjectMode && !item.state.installed && item.state.globalInstalled;
-  const supportMode = item.state.supportMode ?? "yes";
-  const isMismatch = item.state.installed && item.state.mismatchChecked === true && item.state.mismatch === true;
-  const icon = isMismatch ? "!" : item.state.installed ? "✓" : isGlobalOnly ? "◆" : "○";
-  const iconColor = isMismatch ? "yellow" : item.state.installed ? "green" : isGlobalOnly ? "blue" : "gray";
+  const status = item.state.status;
+  const eligibleTargets = item.state.eligibleTargets ?? [];
+  const partialEligibility = configuredTargetCount > 1 && eligibleTargets.length > 0 && eligibleTargets.length < configuredTargetCount;
+  const { glyph, color } = statusGlyph(status, item.state.installed);
+  const label = statusLabel(status);
 
   let displayName = item.name;
   if (item.type === "command") displayName = `/${item.name}`;
+
+  // Override glyph for "global only" (project mode, not installed locally but installed globally).
+  const finalGlyph = status === "not-installed" && isGlobalOnly ? "◆" : glyph;
+  const finalColor = status === "not-installed" && isGlobalOnly ? "blue" : color;
 
   return (
     <Box>
@@ -60,14 +115,15 @@ function ItemRow({ item, selected, isProjectMode }: ItemRowProps) {
         <Text color={selected ? "cyan" : "white"} bold={selected}>
           {selected ? " ▸ " : "   "}
         </Text>
-        <Text color={iconColor}>{icon}</Text>
+        <Text color={finalColor}>{finalGlyph}</Text>
         <Text> </Text>
         <Text color={selected ? "cyan" : "white"} bold={selected}>
           {displayName}
         </Text>
-        {supportMode === "partial" && <Text color="yellow"> [partial]</Text>}
-        {supportMode === "no" && <Text color="red"> [unsupported]</Text>}
-        {isMismatch && <Text color="yellow"> [mismatch]</Text>}
+        {label && <Text color={color}> [{label}]</Text>}
+        {partialEligibility && (
+          <Text color="magenta"> [{eligibleTargets.join("+")} only]</Text>
+        )}
         {isGlobalOnly && <Text color="blue"> [global]</Text>}
         <Text color="gray"> — {item.description}</Text>
       </Text>
@@ -78,9 +134,10 @@ function ItemRow({ item, selected, isProjectMode }: ItemRowProps) {
 interface DetailPanelProps {
   item: StoreItemWithState;
   isProjectMode: boolean;
+  targetIds: TargetId[];
 }
 
-function DetailPanel({ item, isProjectMode }: DetailPanelProps) {
+function DetailPanel({ item, isProjectMode, targetIds }: DetailPanelProps) {
   let displayName = item.name;
   if (item.type === "command") displayName = `/${item.name}`;
 
@@ -93,11 +150,12 @@ function DetailPanel({ item, isProjectMode }: DetailPanelProps) {
     config: "config",
   };
 
+  const status = item.state.status;
   const isGlobalOnly = isProjectMode && !item.state.installed && item.state.globalInstalled;
-  const supportMode = item.state.supportMode ?? "yes";
-  const isUnsupported = supportMode === "no";
-  const isPartial = supportMode === "partial";
-  const isMismatch = item.state.installed && item.state.mismatchChecked === true && item.state.mismatch === true;
+  const isUnsupported = status === "unsupported";
+  const isPartialEligibility = (item.state.eligibleTargets?.length ?? 0) < targetIds.length && !isUnsupported;
+  const perTarget = item.state.perTarget ?? [];
+  const isMulti = targetIds.length > 1;
 
   return (
     <Box
@@ -121,28 +179,44 @@ function DetailPanel({ item, isProjectMode }: DetailPanelProps) {
       <Text>
         <Text color="gray">Status: </Text>
         {isUnsupported ? (
-          <Text color="red">Unsupported for target</Text>
-        ) : isMismatch ? (
-          <Text color="yellow">Installed but different from store (press Enter to overwrite)</Text>
+          <Text color="red">Unsupported for configured target{targetIds.length > 1 ? "s" : ""}</Text>
+        ) : status === "older-version" ? (
+          <Text color="yellow">Installed but different from store (Enter to overwrite)</Text>
+        ) : status === "missing-in-some" ? (
+          <Text color="blue">Installed in some targets, missing in others (Enter to install everywhere)</Text>
         ) : item.state.installed ? (
           <Text color="green">
-            Installed{isProjectMode ? " (project)" : ""}{item.state.installedVia ? ` via ${item.state.installedVia}` : ""}
+            Installed{isProjectMode ? " (project)" : ""}{!isMulti && item.state.installedVia ? ` via ${item.state.installedVia}` : ""}
           </Text>
         ) : isGlobalOnly ? (
           <Text color="blue">
             Installed globally{" "}
-            <Text color="gray">(not in project — press Enter to add to project)</Text>
+            <Text color="gray">(not in project — Enter to add to project)</Text>
           </Text>
         ) : (
           <Text color="gray">Not installed</Text>
         )}
       </Text>
-      {(isPartial || item.state.supportReason) && (
+      {isPartialEligibility && (
+        <Text>
+          <Text color="gray">Eligible targets: </Text>
+          <Text color="magenta">{(item.state.eligibleTargets ?? []).join(", ")}</Text>
+          <Text color="gray"> (others can't install this item)</Text>
+        </Text>
+      )}
+      {item.state.supportReason && !isMulti && (
         <Text>
           <Text color="gray">Support: </Text>
-          {isPartial ? <Text color="yellow">Partial</Text> : <Text color="gray">{supportMode}</Text>}
-          {item.state.supportReason ? <Text color="gray"> — {item.state.supportReason}</Text> : null}
+          <Text color="gray">{item.state.supportReason}</Text>
         </Text>
+      )}
+      {isMulti && perTarget.length > 0 && (
+        <Box flexDirection="column" marginTop={1}>
+          <Text color="gray">Per-target:</Text>
+          {perTarget.map((p) => (
+            <PerTargetRow key={p.targetId} entry={p} />
+          ))}
+        </Box>
       )}
       <Text>
         <Text color="gray">Store path: </Text>
@@ -155,6 +229,37 @@ function DetailPanel({ item, isProjectMode }: DetailPanelProps) {
           {item.sourceId ? <Text color="gray"> ({item.sourceId})</Text> : null}
         </Text>
       )}
+    </Box>
+  );
+}
+
+function PerTargetRow({ entry }: { entry: PerTargetState }) {
+  let icon = "○";
+  let color = "gray";
+  let label = "not installed";
+
+  if (!entry.eligible) {
+    icon = "—";
+    color = "gray";
+    label = entry.state.supportReason ?? "not eligible";
+  } else if (entry.state.installed && entry.state.mismatch === true) {
+    icon = "!";
+    color = "yellow";
+    label = "older version";
+  } else if (entry.state.installed) {
+    icon = "✓";
+    color = "green";
+    label = "installed";
+  }
+
+  return (
+    <Box>
+      <Text>
+        <Text color={color}>  {icon} </Text>
+        <Text>{entry.targetId}</Text>
+        <Text color="gray"> — </Text>
+        <Text color={color}>{label}</Text>
+      </Text>
     </Box>
   );
 }
@@ -184,11 +289,12 @@ function ManageView({ view, onViewChanged, onSwitchView }: ManageViewProps) {
 
   const ctx: ProjectContext = view.context;
   const isProjectMode = ctx.mode === "project";
-  const targetId: TargetId = view.targetId ?? "opencode";
-  const targetLabel = getTargetLabel(targetId);
+  const targetIds: TargetId[] = view.targetIds ?? (view.targetId ? [view.targetId] : ["opencode"]);
+  const isMulti = targetIds.length > 1;
+  const targetLabel = isMulti ? getTargetSelectionLabel(targetIds) : getTargetLabel(targetIds[0]);
   const visibleCategories = useMemo(
-    () => CATEGORIES.filter((category) => isCategoryVisibleForTarget(category.type, targetId)),
-    [targetId]
+    () => CATEGORIES.filter((category) => isCategoryVisibleForTargets(category.type, targetIds)),
+    [targetIds]
   );
 
   useEffect(() => {
@@ -206,23 +312,13 @@ function ManageView({ view, onViewChanged, onSwitchView }: ManageViewProps) {
   const currentCategory = visibleCategories[Math.max(0, Math.min(categoryIndex, visibleCategories.length - 1))];
   const items = useMemo(() => view[currentCategory.key] as StoreItemWithState[], [view, currentCategory.key]);
   const selectedItem = items.length > 0 ? items[itemIndex] : null;
-  const categoryNotice = getCategoryNoticeForTarget(currentCategory.type, targetId, ctx);
+  const categoryNotice = getCategoryNoticeForTargets(currentCategory.type, targetIds, ctx);
 
-  function refreshView() {
-    const refreshCategory = (list: StoreItemWithState[]): StoreItemWithState[] =>
-      list.map((item) => ({ ...item, state: getInstalledStateForTarget(item, targetId, ctx) }));
-
-    const updated: StoreView = {
-      agents: refreshCategory(view.agents),
-      commands: refreshCategory(view.commands),
-      skills: refreshCategory(view.skills),
-      providers: refreshCategory(view.providers),
-      mcps: refreshCategory(view.mcps),
-      configs: refreshCategory(view.configs),
-      context: ctx,
-      targetId,
-    };
-    onViewChanged(updated);
+  async function refreshView() {
+    // Rebuild from the merged source index so per-target state is fully recomputed.
+    const merged = await loadMergedIndexFromConfiguredSources();
+    const next = buildStoreViewForTargets(merged.index.items, targetIds, ctx);
+    onViewChanged(next);
   }
 
   useInput((input, key) => {
@@ -262,21 +358,25 @@ function ManageView({ view, onViewChanged, onSwitchView }: ManageViewProps) {
     // Toggle install
     if ((key.return || input === " ") && selectedItem) {
       try {
-        const supportMode = selectedItem.state.supportMode ?? "yes";
-        if (supportMode !== "yes") {
-          const fallbackMessage = selectedItem.state.supportReason ?? "Install is not available for this target yet.";
+        const status = selectedItem.state.status;
+        if (status === "unsupported") {
+          const fallbackMessage =
+            selectedItem.state.supportReason ?? "Install is not available for this target.";
           setMessage(`Error: ${fallbackMessage}`);
           return;
         }
 
-        const nowInstalled = toggleItemForTarget(selectedItem, targetId, ctx);
-        const wasMismatch = selectedItem.state.installed && selectedItem.state.mismatch === true;
+        const nowInstalled = toggleItemForTargets(selectedItem, targetIds, ctx);
+        const wasUnhealthy = status === "missing-in-some" || status === "older-version";
+        const scopeNote = isProjectMode ? " (project)" : "";
+        const targetNote = isMulti ? ` in ${targetIds.join(" + ")}` : "";
+
         setMessage(
           nowInstalled
-            ? `${wasMismatch ? "~ Updated" : "+ Installed"} ${selectedItem.name}${isProjectMode ? " (project)" : ""}`
-            : `- Uninstalled ${selectedItem.name}${isProjectMode ? " (project)" : ""}`
+            ? `${wasUnhealthy ? "~ Synced" : "+ Installed"} ${selectedItem.name}${scopeNote}${targetNote}`
+            : `- Uninstalled ${selectedItem.name}${scopeNote}${targetNote}`
         );
-        refreshView();
+        void refreshView();
       } catch (err) {
         setMessage(`Error: ${err instanceof Error ? err.message : String(err)}`);
       }
@@ -297,13 +397,13 @@ function ManageView({ view, onViewChanged, onSwitchView }: ManageViewProps) {
       {/* Header */}
       <Box flexDirection="column" marginBottom={1}>
         <Box>
-          <Text bold color="cyan">OpenCode Manager</Text>
+          <Text bold color="cyan">Skillful</Text>
           <Text color="gray"> — Store</Text>
         </Box>
         <Box>
-          <Text color="yellow">Target: </Text>
+          <Text color="yellow">Target{isMulti ? "s" : ""}: </Text>
           <Text bold color="white">{targetLabel}</Text>
-          <Text color="gray"> ({targetId})</Text>
+          <Text color="gray"> ({targetIds.join(", ")})</Text>
         </Box>
         {isProjectMode && (
           <Box>
@@ -346,18 +446,21 @@ function ManageView({ view, onViewChanged, onSwitchView }: ManageViewProps) {
               item={item}
               selected={i === itemIndex}
               isProjectMode={isProjectMode}
+              configuredTargetCount={targetIds.length}
             />
           ))
         )}
       </Box>
 
       {/* Detail panel */}
-      {selectedItem && <DetailPanel item={selectedItem} isProjectMode={isProjectMode} />}
+      {selectedItem && (
+        <DetailPanel item={selectedItem} isProjectMode={isProjectMode} targetIds={targetIds} />
+      )}
 
       {/* Message bar */}
       {message && (
         <Box marginTop={1}>
-          <Text color={message.startsWith("Error") ? "red" : message.startsWith("+") ? "green" : "yellow"}>
+          <Text color={message.startsWith("Error") ? "red" : message.startsWith("+") || message.startsWith("~") ? "green" : "yellow"}>
             {message}
           </Text>
         </Box>
@@ -367,11 +470,9 @@ function ManageView({ view, onViewChanged, onSwitchView }: ManageViewProps) {
       <Box marginTop={1}>
         <Box flexDirection="column">
           <Text color="gray">←/→ category  ↑/↓ navigate  Enter/Space toggle  Tab next view  q quit</Text>
-          {isProjectMode && (
-            <Text color="gray">
-              <Text color="green">✓</Text> project  <Text color="yellow">!</Text> mismatch  <Text color="blue">◆</Text> global only  <Text color="gray">○</Text> not installed
-            </Text>
-          )}
+          <Text color="gray">
+            <Text color="green">✓</Text> installed  {isMulti && <><Text color="blue">◐</Text> missing in some  </>}<Text color="yellow">!</Text> older version  <Text color="gray">○</Text> not installed
+          </Text>
         </Box>
       </Box>
     </Box>
@@ -383,9 +484,11 @@ function ManageView({ view, onViewChanged, onSwitchView }: ManageViewProps) {
 export interface StoreAppProps {
   initialView: StoreView;
   initialAppView?: AppView;
+  /** When set (via --target flag), the session stays locked to this single target. */
+  forcedTargetId?: TargetId;
 }
 
-export default function StoreApp({ initialView, initialAppView = "manage" }: StoreAppProps) {
+export default function StoreApp({ initialView, initialAppView = "manage", forcedTargetId }: StoreAppProps) {
   const { exit } = useApp();
   const [appView, setAppView] = useState<AppView>(initialAppView);
   const [storeView, setStoreView] = useState<StoreView>(initialView);
@@ -397,14 +500,15 @@ export default function StoreApp({ initialView, initialAppView = "manage" }: Sto
   }
 
   async function refreshStoreFromSources(): Promise<void> {
-    const targetId = storeView.targetId ?? "opencode";
+    const targetIds = storeView.targetIds ?? (storeView.targetId ? [storeView.targetId] : ["opencode"]);
     const items = await loadEffectiveItems();
-    const nextView = buildStoreViewForTarget(items, targetId, storeView.context);
+    const nextView = buildStoreViewForTargets(items, targetIds, storeView.context);
     setStoreView(nextView);
   }
 
+  // Mismatch enrichment runs in the background per target.
   useEffect(() => {
-    const targetId = storeView.targetId ?? "opencode";
+    const targetIds = storeView.targetIds ?? (storeView.targetId ? [storeView.targetId] : ["opencode"]);
     const categories: Array<keyof Pick<StoreView, "agents" | "commands" | "skills" | "providers" | "mcps" | "configs">> = [
       "agents",
       "commands",
@@ -415,7 +519,15 @@ export default function StoreApp({ initialView, initialAppView = "manage" }: Sto
     ];
 
     const hasPendingChecks = categories.some((category) =>
-      storeView[category].some((item) => item.state.installed && item.state.mismatchChecked !== true)
+      storeView[category].some((item) => {
+        // Multi-target items expose per-target mismatchChecked via perTarget.
+        if (item.state.perTarget && item.state.perTarget.length > 0) {
+          return item.state.perTarget.some(
+            (p) => p.eligible && p.state.installed && p.state.mismatchChecked !== true
+          );
+        }
+        return item.state.installed && item.state.mismatchChecked !== true;
+      })
     );
 
     if (!hasPendingChecks) {
@@ -424,7 +536,7 @@ export default function StoreApp({ initialView, initialAppView = "manage" }: Sto
 
     let cancelled = false;
 
-    void enrichStoreViewMismatchForTarget(storeView, targetId).then((nextView) => {
+    void enrichStoreViewMismatchForTargets(storeView, targetIds).then((nextView) => {
       if (!cancelled && nextView !== storeView) {
         setStoreView(nextView);
       }
@@ -464,23 +576,42 @@ export default function StoreApp({ initialView, initialAppView = "manage" }: Sto
     }
   });
 
+  /**
+   * Resolve the targets to use when switching to a new project.
+   *  - forcedTargetId (from --target flag) always wins.
+   *  - skillful.targets.json at the new project root → multi-target.
+   *  - explicit registry default → single-target.
+   *  - otherwise carry over the prior session's targets.
+   */
+  function resolveTargetsForProject(projectPath: string, projectTarget?: TargetId): TargetId[] {
+    if (forcedTargetId) return [forcedTargetId];
+
+    const fileTargets = loadProjectTargets(projectPath);
+    if (fileTargets && fileTargets.length > 0) return fileTargets;
+
+    if (projectTarget) return [projectTarget];
+
+    return storeView.targetIds ?? (storeView.targetId ? [storeView.targetId] : ["opencode"]);
+  }
+
   function handleSwitchToProject(projectPath: string, projectTarget?: TargetId) {
     void (async () => {
-      // Build a new store view for the selected project
-      const targetId = projectTarget ?? storeView.targetId ?? "opencode";
+      const targetIds = resolveTargetsForProject(projectPath, projectTarget);
 
-      // Re-detect project context for the selected path
+      // Pre-load any adapters not yet resident (e.g. multi-target with a new tool).
+      await initAdapters(targetIds);
+
       const ctx: ProjectContext = {
         mode: "project",
         projectDir: projectPath,
         projectName: projectPath.split("/").pop() ?? projectPath,
       };
 
-      // Auto-register the project if switching to it
+      // Auto-register the project when switching to it.
       addProject(projectPath);
 
       const items = await loadEffectiveItems();
-      const view = buildStoreViewForTarget(items, targetId, ctx);
+      const view = buildStoreViewForTargets(items, targetIds, ctx);
       setStoreView(view);
       setAppView("manage");
     })().catch((err) => {

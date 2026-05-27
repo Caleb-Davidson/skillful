@@ -73,3 +73,27 @@ Why:
 - protects user-wide defaults,
 - prevents accidental global drift,
 - keeps project workflows predictable.
+
+## Multi-target installs are atomic
+
+Decision:
+
+- When a project declares multiple targets in `skillful.targets.json`, install/uninstall actions fan out to every eligible target and are not exposed as per-target operations.
+
+Why:
+
+- avoids drift between toolchains within one project,
+- matches the user's mental model ("this skill is part of my project"),
+- keeps the row UI legible — one rollup status per item, with per-target detail one step away.
+
+## skillful.targets.json lives in the repo
+
+Decision:
+
+- Multi-target selection is project-local and checked into the repository, not stored in the per-user project registry.
+
+Why:
+
+- collaborators on the same repo share the same target set without re-configuring,
+- avoids conflating per-user preferences (registry) with shared project intent,
+- keeps the per-user registry's optional `defaultTarget` available as a single-target override path.
