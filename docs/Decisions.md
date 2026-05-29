@@ -145,3 +145,15 @@ Why:
 - portable fields (`description`, body / `instructions`) translate cleanly and cover most of what an agent is,
 - dropping `tools` and `model` silently would lose structure the user can fix in one edit; keeping them with a warning preserves intent without claiming correctness,
 - store-shipped agents are never auto-converted — the store ships paired artifacts for those — so the lossy path is scoped to user-authored customs.
+
+## Non-portable command frontmatter is stripped on install and on compare
+
+Decision:
+
+- When the store installs a command, target-recognized but non-portable frontmatter keys are dropped from the file written to disk. The same keys are dropped from the installed file before drift comparison. The list lives in `NON_PORTABLE_COMMAND_FIELDS` in `src/lib/store.ts`; today it is `["model"]`.
+
+Why:
+
+- both Claude Code and OpenCode accept `model:` in command frontmatter, but the value vocabularies differ per target (e.g. `sonnet` is not an OpenCode provider/model id), so a source-shipped value is wrong on at least one target,
+- stripping on both write and compare lets users set a local `model:` preference without the item showing as drifted, which would force them to choose between their preference and reinstalls,
+- centralizing the list keeps the policy expandable — `effort` or future non-portable keys can be added in one place and the install/compare pipelines stay aligned.

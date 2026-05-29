@@ -14,7 +14,7 @@ import os from "node:os";
 import path from "node:path";
 import { parse as parseJsonc, modify, applyEdits } from "jsonc-parser";
 import type { InstalledState, ProjectContext, StoreItemMeta } from "../types.js";
-import { resolveStoreItemPath } from "../store.js";
+import { resolveStoreItemPath, normalizeCommandForHash } from "../store.js";
 import { hashCanonicalJson, hashNormalizedText } from "../hash.js";
 import { CLAUDE_MD_REDIRECT_CONTENT, CLAUDE_MD_REDIRECT_ID } from "../builtins.js";
 
@@ -398,7 +398,8 @@ export async function getMismatchState(
     }
     try {
       const raw = await fs.promises.readFile(filePath, "utf-8");
-      const installedHash = hashNormalizedText(raw);
+      const normalized = item.type === "command" ? normalizeCommandForHash(raw) : raw;
+      const installedHash = hashNormalizedText(normalized);
       return { mismatch: installedHash !== item.storeHash, mismatchChecked: true };
     } catch {
       return { mismatch: true, mismatchChecked: true };
@@ -486,7 +487,8 @@ function installItemGlobal(item: StoreItemMeta, srcPath: string): void {
   if (item.type === "command") {
     const destDir = path.join(baseDir, "commands");
     fs.mkdirSync(destDir, { recursive: true });
-    fs.copyFileSync(srcPath, path.join(destDir, `${item.id}.md`));
+    const raw = fs.readFileSync(srcPath, "utf-8");
+    fs.writeFileSync(path.join(destDir, `${item.id}.md`), normalizeCommandForHash(raw), "utf-8");
     return;
   }
 
@@ -530,7 +532,8 @@ function installItemProject(item: StoreItemMeta, ctx: ProjectContext, srcPath: s
   if (item.type === "command") {
     const destDir = path.join(baseDir, "commands");
     fs.mkdirSync(destDir, { recursive: true });
-    fs.copyFileSync(srcPath, path.join(destDir, `${item.id}.md`));
+    const raw = fs.readFileSync(srcPath, "utf-8");
+    fs.writeFileSync(path.join(destDir, `${item.id}.md`), normalizeCommandForHash(raw), "utf-8");
     return;
   }
 

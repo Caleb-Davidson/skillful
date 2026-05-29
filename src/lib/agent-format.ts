@@ -274,7 +274,7 @@ function escapeTomlMultiline(value: string): string {
 // Minimal, deterministic YAML emitter for frontmatter shapes we see in
 // agent files: top-level scalars, arrays of scalars, and one level of nested
 // `key: value` objects (e.g. `tools: { write: false }`).
-function toYaml(obj: Record<string, unknown>): string {
+export function toYaml(obj: Record<string, unknown>): string {
   const lines: string[] = [];
   for (const [key, value] of Object.entries(obj)) {
     if (value === undefined || value === null) continue;

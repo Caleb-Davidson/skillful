@@ -6,6 +6,7 @@ import path from "node:path";
 import matter from "gray-matter";
 import { parse as parseJsonc } from "jsonc-parser";
 import { hashCanonicalJson, hashNormalizedText } from "./hash.js";
+import { toYaml } from "./agent-format.js";
 import type {
   StoreIndex,
   StoreItemMeta,
@@ -38,6 +39,37 @@ function parseTargetIds(raw: unknown): TargetId[] | undefined {
 
   if (parsed.length === 0) return undefined;
   return [...new Set(parsed)];
+}
+
+/**
+ * Frontmatter keys stripped from command files before hashing/installing.
+ * These are fields the target accepts but whose values aren't portable
+ * across targets (e.g. `model: sonnet` is meaningless to a non-Claude
+ * target). Stripping on both write and compare lets users set them
+ * locally without showing as drift.
+ */
+export const NON_PORTABLE_COMMAND_FIELDS: readonly string[] = ["model"];
+
+/**
+ * Normalize a command file for hashing and on-disk install: drop the
+ * non-portable frontmatter keys in NON_PORTABLE_COMMAND_FIELDS, then
+ * re-emit via the canonical YAML emitter so install/compare always go
+ * through the same pipeline.
+ */
+export function normalizeCommandForHash(raw: string): string {
+  const parsed = matter(raw);
+  const data = (parsed.data ?? {}) as Record<string, unknown>;
+  if (Object.keys(data).length === 0) {
+    return raw;
+  }
+  const fields = { ...data };
+  for (const key of NON_PORTABLE_COMMAND_FIELDS) {
+    delete fields[key];
+  }
+  const body = parsed.content.replace(/^\n+/, "").replace(/\n+$/, "");
+  const hasFields = Object.keys(fields).length > 0;
+  const frontmatter = hasFields ? `---\n${toYaml(fields)}---\n\n` : "";
+  return `${frontmatter}${body}\n`;
 }
 
 function withTargetTags(tags: string[], targetIds?: TargetId[]): string[] {
@@ -120,7 +152,7 @@ function scanCommands(storePath: string, source?: ScanSourceMeta): StoreItemMeta
           description: data.description ?? `Command: /${id}`,
           tags: withTargetTags([...(data.agent ? [`agent:${data.agent}`] : [])], targetIds),
           path: `commands/${file}`,
-          storeHash: hashNormalizedText(raw),
+          storeHash: hashNormalizedText(normalizeCommandForHash(raw)),
           targetIds,
         },
         source

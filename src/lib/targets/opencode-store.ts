@@ -9,7 +9,7 @@ import path from "node:path";
 import os from "node:os";
 import { parse as parseJsonc, modify, applyEdits } from "jsonc-parser";
 import type { StoreItemMeta, InstalledState, ProjectContext } from "../types.js";
-import { resolveStoreItemPath } from "../store.js";
+import { resolveStoreItemPath, normalizeCommandForHash } from "../store.js";
 import { hashCanonicalJson, hashNormalizedText } from "../hash.js";
 
 const FORMAT_OPTS = { formattingOptions: { insertSpaces: true, tabSize: 2 } };
@@ -341,7 +341,8 @@ export async function getMismatchState(
 
     try {
       const raw = await fs.promises.readFile(filePath, "utf-8");
-      const installedHash = hashNormalizedText(raw);
+      const normalized = item.type === "command" ? normalizeCommandForHash(raw) : raw;
+      const installedHash = hashNormalizedText(normalized);
       return { mismatch: installedHash !== item.storeHash, mismatchChecked: true };
     } catch {
       return { mismatch: true, mismatchChecked: true };
@@ -390,7 +391,8 @@ function installItemGlobal(item: StoreItemMeta, srcPath: string): void {
   } else if (item.type === "command") {
     const destDir = path.join(getGlobalConfigDir(), "commands");
     fs.mkdirSync(destDir, { recursive: true });
-    fs.copyFileSync(srcPath, path.join(destDir, `${item.id}.md`));
+    const raw = fs.readFileSync(srcPath, "utf-8");
+    fs.writeFileSync(path.join(destDir, `${item.id}.md`), normalizeCommandForHash(raw), "utf-8");
   } else if (item.type === "skill") {
     const destDir = path.join(getGlobalConfigDir(), "skills", item.id);
     fs.mkdirSync(destDir, { recursive: true });
@@ -418,7 +420,8 @@ function installItemProject(item: StoreItemMeta, ctx: ProjectContext, srcPath: s
   } else if (item.type === "command") {
     const destDir = path.join(dotDir, "commands");
     fs.mkdirSync(destDir, { recursive: true });
-    fs.copyFileSync(srcPath, path.join(destDir, `${item.id}.md`));
+    const raw = fs.readFileSync(srcPath, "utf-8");
+    fs.writeFileSync(path.join(destDir, `${item.id}.md`), normalizeCommandForHash(raw), "utf-8");
   } else if (item.type === "skill") {
     const destDir = path.join(dotDir, "skills", item.id);
     fs.mkdirSync(destDir, { recursive: true });
