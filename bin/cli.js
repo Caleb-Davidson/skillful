@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { existsSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import process from "node:process";
 
@@ -11,7 +11,9 @@ const srcCli = join(__dirname, "../src/cli.tsx");
 // Prefer the pre-compiled dist/ version for fast startup.
 // Fall back to tsx (dev mode) only when dist/ doesn't exist.
 if (existsSync(distCli)) {
-  await import(resolve(distCli));
+  // Convert to a file:// URL so Windows absolute paths (e.g. C:\...) aren't
+  // misread as a URL scheme by the ESM loader.
+  await import(pathToFileURL(resolve(distCli)).href);
 } else {
   // Dev fallback — transpile on the fly via tsx
   const { spawnSync } = await import("node:child_process");
