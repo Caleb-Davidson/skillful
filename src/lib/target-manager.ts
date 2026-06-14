@@ -323,6 +323,16 @@ export function installItemForTarget(item: StoreItemMeta, targetId: TargetId, ct
 }
 
 /**
+ * Uninstall a single item from a single target. Symmetric counterpart to
+ * `installItemForTarget`; the plural `uninstallItemForTargets` remains the bulk
+ * API. The Agent CLI's `remove` handler drives its own fan-out over this so it
+ * can report exactly which targets changed even on partial failure.
+ */
+export function uninstallItemForTarget(item: StoreItemMeta, targetId: TargetId, ctx?: ProjectContext): void {
+  getAdapter(targetId).uninstallItem(item, ctx);
+}
+
+/**
  * Install across all configured targets that support the item.
  * Returns the list of targets installed into.
  */

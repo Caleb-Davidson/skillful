@@ -9,6 +9,7 @@
 // Keep this the only place commands are wired in.
 
 import type { CommandDef } from "../types.js";
+import { itemCommands } from "./items.js";
 import { sourceCommands } from "./sources.js";
 
-export const allCommands: CommandDef[] = [...sourceCommands];
+export const allCommands: CommandDef[] = [...sourceCommands, ...itemCommands];
