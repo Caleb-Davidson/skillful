@@ -258,6 +258,9 @@ async function main() {
   // Build the view with installed states, scoped to the detected context.
   const view = buildStoreViewForTargets(loaded.items, targetIds, ctx);
 
+  // Clear the screen so the TUI always starts at the top of the terminal.
+  process.stdout.write("\x1B[2J\x1B[H");
+
   // Render the TUI. When --target was passed, lock the session to that single target.
   render(
     React.createElement(StoreApp, {
