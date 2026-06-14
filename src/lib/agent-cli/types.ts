@@ -57,6 +57,13 @@ export interface CommandContext {
   command: string;
   positionals: string[];
   flags: ParsedFlags;
+  /**
+   * The full command list backing this invocation, populated by `dispatch()`
+   * from the registry it already built. Lets introspection commands (`schema`)
+   * derive the catalog from the live registry without importing the command
+   * index (which would create a circular import, since the index imports them).
+   */
+  commands?: CommandDef[];
 }
 
 /**

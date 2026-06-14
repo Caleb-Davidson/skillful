@@ -40,6 +40,13 @@ src/
     project-targets.ts       # loads project-local skillful.targets.json
     agent-format.ts          # MD ↔ TOML agent conversion (used by sync)
     sync.ts                  # discovery, conflict detection, mirror execution
+    agent-cli/               # non-interactive JSON CLI over the same lib functions
+      dispatch.ts            # verb-noun routing + single-envelope emission
+      parser.ts              # zero-dep `verb noun [id] --flags` argv parser
+      output.ts              # envelope build, exit-code map, type projections
+      resolve.ts             # scope/target/project resolution (explicit-flag contract)
+      types.ts               # CommandDef/CommandContext/CliError + envelope types
+      commands/              # registered commands: sources, items, meta (schema/version)
     targets/
       opencode-store.ts      # install/uninstall/read/write for OpenCode
       *.ts                   # target adapters

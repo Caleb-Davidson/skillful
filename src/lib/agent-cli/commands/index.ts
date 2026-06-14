@@ -10,6 +10,7 @@
 
 import type { CommandDef } from "../types.js";
 import { itemCommands } from "./items.js";
+import { metaCommands } from "./meta.js";
 import { sourceCommands } from "./sources.js";
 
-export const allCommands: CommandDef[] = [...sourceCommands, ...itemCommands];
+export const allCommands: CommandDef[] = [...sourceCommands, ...itemCommands, ...metaCommands];

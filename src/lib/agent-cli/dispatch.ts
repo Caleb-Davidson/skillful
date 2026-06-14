@@ -24,6 +24,7 @@ export const AGENT_CLI_VERBS: readonly string[] = [
   "update",
   "check",
   "schema",
+  "version",
 ];
 
 /** True when the first non-flag token is an Agent CLI verb. */
@@ -66,6 +67,9 @@ export async function dispatch(argv: string[], registry: Map<string, CommandDef>
     // Positionals beyond the verb+noun are the command's own args (e.g. an id).
     positionals: positionals.slice(2),
     flags,
+    // The live registry, so introspection (`schema`) can derive the catalog
+    // without importing the command index (avoids a circular import).
+    commands: [...registry.values()],
   };
 
   try {

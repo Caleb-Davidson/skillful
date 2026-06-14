@@ -72,8 +72,8 @@ A matrix of four verbs over six item types
 ```text
 list    <type>           # many   → buildStoreViewForTargets()[type]
 info    <type> <id>      # one, detailed (item + per-target state)
-install <type> <id>      # installItemForTargets()
-remove  <type> <id>      # uninstallItemForTargets()   (new thin export)
+install <type> <id>      # installItemForTarget() per eligible target
+remove  <type> <id>      # uninstallItemForTarget() per installed target
 ```
 
 `list` takes no id. `info` / `install` / `remove` take exactly one `<id>`; because the
@@ -245,8 +245,11 @@ reason.
 
 - **`skillful schema`** prints the full command catalog as JSON — every command, its
   positional args, its flags, the data shape it returns, and the exit-code table — so
-  an agent can discover the surface instead of scraping help text.
-- **`skillful --version`** prints the version.
+  an agent can discover the surface instead of scraping help text. The catalog is
+  generated from the live command registry, so it never drifts from the real surface.
+- **`skillful version`** prints the version as a JSON envelope (`data.version`),
+  consistent with the rest of the surface rather than a bare `--version` string. The
+  same version is also surfaced inside `schema` (`data.version`).
 
 ## Run shape
 
@@ -272,15 +275,16 @@ This is a presentation layer; the build is mostly wiring.
 
 - **Dispatch placement.** Route the verb-noun commands at the top of `main()` in
   `cli.tsx`, before the TUI `render()` path — the same place `sync` and `--update`
-  are already handled. Keep the handlers in a dedicated module (e.g.
-  `lib/agent-cli.ts`) so `cli.tsx` stays a router.
+  are already handled. Keep the handlers in a dedicated module (`lib/agent-cli/`)
+  so `cli.tsx` stays a router.
 - **Argument parsing.** The existing parsing is ad-hoc (`hasFlag`, `parseSubcommand`).
   A small structured parser for `verb noun [id] --flags` fits the zero-extra-deps
   style of the project; no parser library is required.
-- **The one new library export.** `target-manager.ts` has `installItemForTargets()`
-  but no symmetrical uninstall. Add `uninstallItemForTargets(item, targetIds, ctx)`
-  mirroring the install fan-out (each adapter already implements `uninstallItem`).
-  Do **not** reuse `toggleItemForTargets()` for `remove`, since toggle would *install*
-  an item that is not currently installed.
+- **New library exports.** `target-manager.ts` gains symmetric uninstall helpers:
+  `uninstallItemForTargets(item, targetIds, ctx)` (bulk, mirrors `installItemForTargets`)
+  and `uninstallItemForTarget(item, targetId, ctx)` (single, mirrors `installItemForTarget`).
+  The item handler fans out with the *singular* per-target call so it can report exactly
+  which targets changed even on partial failure. `remove` never routes through
+  `toggleItemForTargets()`, since toggle would *install* an item that is not installed.
 - **Output is a projection.** Map `StoreItemMeta` + `InstalledState` to the documented
   item shape in one place; never `JSON.stringify` the internal objects directly.
