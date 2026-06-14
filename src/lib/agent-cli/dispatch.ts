@@ -69,8 +69,8 @@ export async function dispatch(argv: string[], registry: Map<string, CommandDef>
   };
 
   try {
-    const data = await def.run(ctx);
-    emit(buildOk(command, data));
+    const result = await def.run(ctx);
+    emit(buildOk(command, result.data, result.warnings));
     return 0;
   } catch (err) {
     if (err instanceof CliError) {

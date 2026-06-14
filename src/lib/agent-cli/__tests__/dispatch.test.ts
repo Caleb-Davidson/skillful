@@ -31,7 +31,7 @@ test("dispatch runs a matched command and emits an ok envelope with exit 0", asy
     noun: "things",
     run(ctx) {
       received = ctx;
-      return { count: 3 };
+      return { data: { count: 3 } };
     },
   };
   const { code, out } = await captureStdout(() =>
@@ -93,7 +93,7 @@ test("dispatch awaits async handlers", async () => {
     verb: "check",
     noun: "sources",
     async run() {
-      return await Promise.resolve({ checked: true });
+      return await Promise.resolve({ data: { checked: true } });
     },
   };
   const { code, out } = await captureStdout(() => dispatch(["check", "sources"], buildRegistry([fake])));

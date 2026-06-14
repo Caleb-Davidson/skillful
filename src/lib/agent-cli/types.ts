@@ -60,12 +60,22 @@ export interface CommandContext {
 }
 
 /**
+ * The value a command handler returns on success: the envelope `data` payload
+ * plus optional `warnings` to surface in the top-level `warnings` array.
+ */
+export interface CommandResult {
+  data: unknown;
+  warnings?: string[];
+}
+
+/**
  * A single command in the registry. The matched key is `${verb} ${noun}`.
- * `run` returns the success `data` payload, or throws `CliError`.
+ * `run` returns a `CommandResult` (success `data` + optional `warnings`), or
+ * throws `CliError`.
  */
 export interface CommandDef {
   verb: string;
   noun: string;
   summary?: string;
-  run(ctx: CommandContext): Promise<unknown> | unknown;
+  run(ctx: CommandContext): Promise<CommandResult> | CommandResult;
 }
