@@ -37,6 +37,7 @@ import type { TargetId, AppView, StoreSource, StoreItemMeta } from "./lib/types.
 import StoreApp from "./components/StoreApp.js";
 import { runSync } from "./lib/sync-cli.js";
 import type { TargetAdapter } from "./lib/targets/shared.js";
+import { isAgentCliInvocation, runAgentCli } from "./lib/agent-cli/dispatch.js";
 
 function hasUpdateFlag(argv: string[] = process.argv.slice(2)): boolean {
   return argv.includes("--update");
@@ -180,6 +181,12 @@ function resolveStartupTargets(
 }
 
 async function main() {
+  // Non-interactive Agent CLI: route verb-noun commands before any TUI/sync work.
+  // Runs first so it never starts the Ink render loop or loads settings.
+  if (isAgentCliInvocation(process.argv.slice(2))) {
+    process.exit(await runAgentCli(process.argv.slice(2)));
+  }
+
   if (hasSyncSubcommand()) {
     const code = await runSyncSubcommand();
     process.exit(code);

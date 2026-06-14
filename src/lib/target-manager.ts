@@ -355,6 +355,42 @@ export function installItemForTargets(
   return installed;
 }
 
+/**
+ * Uninstall across all configured targets that are eligible for the item.
+ * Mirrors `installItemForTargets`: collects successes, aggregates errors with
+ * the same partial/total semantics, and returns the targets actually
+ * uninstalled from. Does NOT route through `toggleItemForTargets` (toggle would
+ * install an item that is not currently installed).
+ */
+export function uninstallItemForTargets(
+  item: StoreItemMeta,
+  targetIds: TargetId[],
+  ctx?: ProjectContext
+): TargetId[] {
+  const eligible = eligibleTargetsForItem(item, targetIds);
+  if (eligible.length === 0) {
+    throw new Error(`No configured target supports '${item.type}' items.`);
+  }
+  const errors: string[] = [];
+  const uninstalled: TargetId[] = [];
+  for (const id of eligible) {
+    try {
+      getAdapter(id).uninstallItem(item, ctx);
+      uninstalled.push(id);
+    } catch (err) {
+      errors.push(`${id}: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+  if (errors.length > 0 && uninstalled.length === 0) {
+    throw new Error(`Uninstall failed for all targets:\n${errors.join("\n")}`);
+  }
+  if (errors.length > 0) {
+    // Partial failure surfaced via a thrown error after recording the wins.
+    throw new Error(`Uninstalled from ${uninstalled.join(", ")}; failures:\n${errors.join("\n")}`);
+  }
+  return uninstalled;
+}
+
 export function toggleItemForTarget(item: StoreItemMeta, targetId: TargetId, ctx?: ProjectContext): boolean {
   const adapter = getAdapter(targetId);
   const hintedMismatch =

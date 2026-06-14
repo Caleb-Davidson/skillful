@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "tsx src/cli.tsx",
     "build": "tsc",
+    "test": "node --import tsx --test \"src/lib/agent-cli/**/*.test.ts\"",
     "start": "node dist/cli.js",
     "setup": "node scripts/setup.js",
     "prepublishOnly": "npm run build"
