@@ -74,8 +74,8 @@ export const claudeCodeAdapter: TargetAdapter = {
   async getMismatchState(item: StoreItemMeta, ctx?: ProjectContext): Promise<Pick<InstalledState, "mismatch" | "mismatchChecked">> {
     return getClaudeMismatchState(item, ctx);
   },
-  installItem(item: StoreItemMeta, ctx?: ProjectContext): void {
-    installClaudeItem(item, ctx);
+  installItem(item: StoreItemMeta, ctx?: ProjectContext): string {
+    return installClaudeItem(item, ctx);
   },
   uninstallItem(item: StoreItemMeta, ctx?: ProjectContext): void {
     uninstallClaudeItem(item, ctx);

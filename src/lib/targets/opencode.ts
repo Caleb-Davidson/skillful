@@ -40,8 +40,8 @@ export const opencodeAdapter: TargetAdapter = {
   async getMismatchState(item: StoreItemMeta, ctx?: ProjectContext): Promise<Pick<InstalledState, "mismatch" | "mismatchChecked">> {
     return getOpenCodeMismatchState(item, ctx);
   },
-  installItem(item: StoreItemMeta, ctx?: ProjectContext): void {
-    installOpenCodeItem(item, ctx);
+  installItem(item: StoreItemMeta, ctx?: ProjectContext): string {
+    return installOpenCodeItem(item, ctx);
   },
   uninstallItem(item: StoreItemMeta, ctx?: ProjectContext): void {
     uninstallOpenCodeItem(item, ctx);

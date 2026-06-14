@@ -424,11 +424,11 @@ export async function getMismatchState(
 // ── Install / uninstall ─────────────────────────────────────────────────────
 
 /** Install a store item into Claude's active config scope. */
-export function installItem(item: StoreItemMeta, ctx?: ProjectContext): void {
+export function installItem(item: StoreItemMeta, ctx?: ProjectContext): string {
   if (item.type === "config") {
-    installConfigItem(item, ctx);
+    const installedPath = installConfigItem(item, ctx);
     invalidateCache();
-    return;
+    return installedPath;
   }
 
   const srcPath = resolveStoreItemPath(item);
@@ -436,20 +436,20 @@ export function installItem(item: StoreItemMeta, ctx?: ProjectContext): void {
     throw new Error(`Store item not found: ${srcPath}`);
   }
 
-  if (!ctx || ctx.mode === "global") {
-    installItemGlobal(item, srcPath);
-  } else {
-    installItemProject(item, ctx, srcPath);
-  }
+  const installedPath =
+    !ctx || ctx.mode === "global"
+      ? installItemGlobal(item, srcPath)
+      : installItemProject(item, ctx, srcPath);
 
   invalidateCache();
+  return installedPath;
 }
 
 /**
  * Install a built-in config item. Config items have no on-disk store payload —
  * the install action is fully described by the adapter.
  */
-function installConfigItem(item: StoreItemMeta, ctx?: ProjectContext): void {
+function installConfigItem(item: StoreItemMeta, ctx?: ProjectContext): string {
   if (isClaudeMdRedirect(item)) {
     if (!ctx || ctx.mode !== "project" || !ctx.projectDir) {
       throw new Error("CLAUDE.md Redirect requires a project context; switch to a project to install.");
@@ -462,16 +462,16 @@ function installConfigItem(item: StoreItemMeta, ctx?: ProjectContext): void {
           `CLAUDE.md already exists at ${filePath} with different content. Remove or back it up before installing the redirect.`
         );
       }
-      return; // already the redirect — nothing to do
+      return filePath; // already the redirect — nothing to do
     }
     fs.writeFileSync(filePath, CLAUDE_MD_REDIRECT_CONTENT, "utf-8");
-    return;
+    return filePath;
   }
 
   throw new Error(`Claude Code does not know how to install config item '${item.id}'.`);
 }
 
-function installItemGlobal(item: StoreItemMeta, srcPath: string): void {
+function installItemGlobal(item: StoreItemMeta, srcPath: string): string {
   const baseDir = getGlobalClaudeDir();
 
   if (item.type === "agent") {
@@ -480,16 +480,18 @@ function installItemGlobal(item: StoreItemMeta, srcPath: string): void {
     }
     const destDir = path.join(baseDir, "agents");
     fs.mkdirSync(destDir, { recursive: true });
-    fs.copyFileSync(srcPath, path.join(destDir, `${item.id}.md`));
-    return;
+    const destPath = path.join(destDir, `${item.id}.md`);
+    fs.copyFileSync(srcPath, destPath);
+    return destPath;
   }
 
   if (item.type === "command") {
     const destDir = path.join(baseDir, "commands");
     fs.mkdirSync(destDir, { recursive: true });
+    const destPath = path.join(destDir, `${item.id}.md`);
     const raw = fs.readFileSync(srcPath, "utf-8");
-    fs.writeFileSync(path.join(destDir, `${item.id}.md`), normalizeCommandForHash(raw), "utf-8");
-    return;
+    fs.writeFileSync(destPath, normalizeCommandForHash(raw), "utf-8");
+    return destPath;
   }
 
   if (item.type === "skill") {
@@ -500,7 +502,7 @@ function installItemGlobal(item: StoreItemMeta, srcPath: string): void {
     const destDir = path.join(baseDir, "skills", item.id);
     fs.mkdirSync(destDir, { recursive: true });
     fs.cpSync(srcDir, destDir, { recursive: true });
-    return;
+    return destDir;
   }
 
   if (item.type === "mcp") {
@@ -510,13 +512,13 @@ function installItemGlobal(item: StoreItemMeta, srcPath: string): void {
     let raw = readGlobalMcpConfigRaw();
     raw = applyEdits(raw, modify(raw, [MCP_KEY, item.id], payload, FORMAT_OPTS));
     writeGlobalMcpConfig(raw);
-    return;
+    return getGlobalMcpConfigPath();
   }
 
   throw new Error(`Claude Code does not support installing items of type '${item.type}'.`);
 }
 
-function installItemProject(item: StoreItemMeta, ctx: ProjectContext, srcPath: string): void {
+function installItemProject(item: StoreItemMeta, ctx: ProjectContext, srcPath: string): string {
   const baseDir = getProjectClaudeDir(ctx);
 
   if (item.type === "agent") {
@@ -525,16 +527,18 @@ function installItemProject(item: StoreItemMeta, ctx: ProjectContext, srcPath: s
     }
     const destDir = path.join(baseDir, "agents");
     fs.mkdirSync(destDir, { recursive: true });
-    fs.copyFileSync(srcPath, path.join(destDir, `${item.id}.md`));
-    return;
+    const destPath = path.join(destDir, `${item.id}.md`);
+    fs.copyFileSync(srcPath, destPath);
+    return destPath;
   }
 
   if (item.type === "command") {
     const destDir = path.join(baseDir, "commands");
     fs.mkdirSync(destDir, { recursive: true });
+    const destPath = path.join(destDir, `${item.id}.md`);
     const raw = fs.readFileSync(srcPath, "utf-8");
-    fs.writeFileSync(path.join(destDir, `${item.id}.md`), normalizeCommandForHash(raw), "utf-8");
-    return;
+    fs.writeFileSync(destPath, normalizeCommandForHash(raw), "utf-8");
+    return destPath;
   }
 
   if (item.type === "skill") {
@@ -545,7 +549,7 @@ function installItemProject(item: StoreItemMeta, ctx: ProjectContext, srcPath: s
     const destDir = path.join(baseDir, "skills", item.id);
     fs.mkdirSync(destDir, { recursive: true });
     fs.cpSync(srcDir, destDir, { recursive: true });
-    return;
+    return destDir;
   }
 
   if (item.type === "mcp") {
@@ -555,7 +559,7 @@ function installItemProject(item: StoreItemMeta, ctx: ProjectContext, srcPath: s
     let raw = readProjectMcpConfigRaw(ctx);
     raw = applyEdits(raw, modify(raw, [MCP_KEY, item.id], payload, FORMAT_OPTS));
     writeProjectMcpConfig(ctx, raw);
-    return;
+    return getProjectMcpConfigPath(ctx);
   }
 
   throw new Error(`Claude Code does not support installing items of type '${item.type}'.`);

@@ -224,6 +224,7 @@ function makeInstallCommand(row: TypeRow): CommandDef {
             requestedTargets: resolved.targets,
             eligibleTargets: eligible,
             changedTargets: [],
+            installedPaths: {},
             skipped,
             changed: false,
             dryRun: true,
@@ -234,11 +235,13 @@ function makeInstallCommand(row: TypeRow): CommandDef {
       // Fan out per eligible target so we can report exactly which ones changed,
       // even when one throws.
       const changed: TargetId[] = [];
+      const installedPaths: Partial<Record<TargetId, string>> = {};
       const failures: FailedTarget[] = [];
       for (const t of eligible) {
         try {
-          installItemForTarget(item, t, resolved.projectCtx);
+          const installedPath = installItemForTarget(item, t, resolved.projectCtx);
           changed.push(t);
+          installedPaths[t] = installedPath;
         } catch (err) {
           failures.push({ targetId: t, error: err instanceof Error ? err.message : String(err) });
         }
@@ -248,14 +251,14 @@ function makeInstallCommand(row: TypeRow): CommandDef {
         throw new CliError(
           "OPERATION_FAILED",
           `Install failed for all targets: ${failures.map((f) => `${f.targetId}: ${f.error}`).join("; ")}`,
-          { failures }
+          { installedPaths, failures, skipped }
         );
       }
       if (failures.length > 0) {
         throw new CliError(
           "PARTIAL_FAILURE",
           `Installed in ${changed.join(", ")}; failed for ${failures.map((f) => `${f.targetId}: ${f.error}`).join("; ")}.`,
-          { changedTargets: changed, failures, skipped }
+          { changedTargets: changed, installedPaths, failures, skipped }
         );
       }
 
@@ -266,6 +269,7 @@ function makeInstallCommand(row: TypeRow): CommandDef {
           requestedTargets: resolved.targets,
           eligibleTargets: eligible,
           changedTargets: changed,
+          installedPaths,
           skipped,
           changed: true,
           dryRun: false,

@@ -43,7 +43,7 @@ export interface TargetAdapter {
   getMismatchState?(item: StoreItemMeta, ctx?: ProjectContext): Promise<Pick<InstalledState, "mismatch" | "mismatchChecked">>;
   isItemVisible?(item: StoreItemMeta): boolean;
   getCategoryNotice?(category: StoreItemType, ctx?: ProjectContext): string | undefined;
-  installItem(item: StoreItemMeta, ctx?: ProjectContext): void;
+  installItem(item: StoreItemMeta, ctx?: ProjectContext): string;
   uninstallItem(item: StoreItemMeta, ctx?: ProjectContext): void;
 
   // ── Sync extensions ─────────────────────────────────────────────────────
@@ -78,7 +78,7 @@ export function makeNotImplementedAdapter(id: TargetId, label: string, capabilit
             : `${label} adapter install detection is not implemented yet for '${item.type}'.`,
       };
     },
-    installItem(item: StoreItemMeta): void {
+    installItem(item: StoreItemMeta): string {
       const supportMode = capabilities[item.type];
       if (supportMode === "no") {
         throw new Error(`${label} does not support '${item.type}' items.`);

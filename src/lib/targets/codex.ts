@@ -45,8 +45,8 @@ export const codexAdapter: TargetAdapter = {
   getInstalledState(item: StoreItemMeta, ctx?: ProjectContext): InstalledState {
     return getCodexInstalledState(item, ctx);
   },
-  installItem(item: StoreItemMeta, ctx?: ProjectContext): void {
-    installCodexItem(item, ctx);
+  installItem(item: StoreItemMeta, ctx?: ProjectContext): string {
+    return installCodexItem(item, ctx);
   },
   uninstallItem(item: StoreItemMeta, ctx?: ProjectContext): void {
     uninstallCodexItem(item, ctx);

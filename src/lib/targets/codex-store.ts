@@ -201,7 +201,7 @@ export function getInstalledState(item: StoreItemMeta, ctx?: ProjectContext): In
   return { installed: false, ...support };
 }
 
-export function installItem(item: StoreItemMeta, ctx?: ProjectContext): void {
+export function installItem(item: StoreItemMeta, ctx?: ProjectContext): string {
   const srcPath = resolveStoreItemPath(item);
   if (!fs.existsSync(srcPath)) {
     throw new Error(`Store item not found: ${srcPath}`);
@@ -218,7 +218,7 @@ export function installItem(item: StoreItemMeta, ctx?: ProjectContext): void {
     const destPath = getAgentDestPath(item, ctx);
     ensureParentDir(destPath);
     fs.copyFileSync(srcPath, destPath);
-    return;
+    return destPath;
   }
 
   if (item.type === "skill") {
@@ -228,7 +228,7 @@ export function installItem(item: StoreItemMeta, ctx?: ProjectContext): void {
       throw new Error(`Skill '${item.id}' is missing SKILL.md and cannot be installed.`);
     }
     copyDirectoryRecursive(srcDir, destDir);
-    return;
+    return destDir;
   }
 
   if (item.type === "provider" || item.type === "mcp") {
@@ -240,7 +240,7 @@ export function installItem(item: StoreItemMeta, ctx?: ProjectContext): void {
     const raw = readTomlRaw();
     const next = upsertTomlSection(raw, section, item.id, payload);
     writeTomlRaw(next);
-    return;
+    return getConfigPath();
   }
 
   throw new Error(`Unsupported Codex item type: ${item.type}`);

@@ -367,76 +367,92 @@ export async function getMismatchState(
 }
 
 /** Install a store item into OpenCode's active config scope. */
-export function installItem(item: StoreItemMeta, ctx?: ProjectContext): void {
+export function installItem(item: StoreItemMeta, ctx?: ProjectContext): string {
   const srcPath = resolveStoreItemPath(item);
 
   if (!fs.existsSync(srcPath)) {
     throw new Error(`Store item not found: ${srcPath}`);
   }
 
-  if (!ctx || ctx.mode === "global") {
-    installItemGlobal(item, srcPath);
-  } else {
-    installItemProject(item, ctx, srcPath);
-  }
+  const installedPath =
+    !ctx || ctx.mode === "global"
+      ? installItemGlobal(item, srcPath)
+      : installItemProject(item, ctx, srcPath);
 
   invalidateCache();
+  return installedPath;
 }
 
-function installItemGlobal(item: StoreItemMeta, srcPath: string): void {
+function installItemGlobal(item: StoreItemMeta, srcPath: string): string {
   if (item.type === "agent") {
     const destDir = path.join(getGlobalConfigDir(), "agents");
     fs.mkdirSync(destDir, { recursive: true });
-    fs.copyFileSync(srcPath, path.join(destDir, `${item.id}.md`));
+    const destPath = path.join(destDir, `${item.id}.md`);
+    fs.copyFileSync(srcPath, destPath);
+    return destPath;
   } else if (item.type === "command") {
     const destDir = path.join(getGlobalConfigDir(), "commands");
     fs.mkdirSync(destDir, { recursive: true });
+    const destPath = path.join(destDir, `${item.id}.md`);
     const raw = fs.readFileSync(srcPath, "utf-8");
-    fs.writeFileSync(path.join(destDir, `${item.id}.md`), normalizeCommandForHash(raw), "utf-8");
+    fs.writeFileSync(destPath, normalizeCommandForHash(raw), "utf-8");
+    return destPath;
   } else if (item.type === "skill") {
     const destDir = path.join(getGlobalConfigDir(), "skills", item.id);
     fs.mkdirSync(destDir, { recursive: true });
     fs.copyFileSync(srcPath, path.join(destDir, "SKILL.md"));
+    return destDir;
   } else if (item.type === "provider") {
     const payload = readStoreJsonPayload(item);
     let raw = readGlobalConfigRaw();
     raw = applyEdits(raw, modify(raw, ["provider", item.id], payload, FORMAT_OPTS));
     writeGlobalConfig(raw);
+    return getGlobalConfigPath();
   } else if (item.type === "mcp") {
     const payload = readStoreJsonPayload(item);
     let raw = readGlobalConfigRaw();
     raw = applyEdits(raw, modify(raw, ["mcp", item.id], payload, FORMAT_OPTS));
     writeGlobalConfig(raw);
+    return getGlobalConfigPath();
   }
+  throw new Error(`OpenCode does not support installing items of type '${item.type}'.`);
 }
 
-function installItemProject(item: StoreItemMeta, ctx: ProjectContext, srcPath: string): void {
+function installItemProject(item: StoreItemMeta, ctx: ProjectContext, srcPath: string): string {
   const dotDir = getProjectDotDir(ctx);
 
   if (item.type === "agent") {
     const destDir = path.join(dotDir, "agents");
     fs.mkdirSync(destDir, { recursive: true });
-    fs.copyFileSync(srcPath, path.join(destDir, `${item.id}.md`));
+    const destPath = path.join(destDir, `${item.id}.md`);
+    fs.copyFileSync(srcPath, destPath);
+    return destPath;
   } else if (item.type === "command") {
     const destDir = path.join(dotDir, "commands");
     fs.mkdirSync(destDir, { recursive: true });
+    const destPath = path.join(destDir, `${item.id}.md`);
     const raw = fs.readFileSync(srcPath, "utf-8");
-    fs.writeFileSync(path.join(destDir, `${item.id}.md`), normalizeCommandForHash(raw), "utf-8");
+    fs.writeFileSync(destPath, normalizeCommandForHash(raw), "utf-8");
+    return destPath;
   } else if (item.type === "skill") {
     const destDir = path.join(dotDir, "skills", item.id);
     fs.mkdirSync(destDir, { recursive: true });
     fs.copyFileSync(srcPath, path.join(destDir, "SKILL.md"));
+    return destDir;
   } else if (item.type === "provider") {
     const payload = readStoreJsonPayload(item);
     let raw = readProjectConfigRaw(ctx);
     raw = applyEdits(raw, modify(raw, ["provider", item.id], payload, FORMAT_OPTS));
     writeProjectConfig(ctx, raw);
+    return getProjectConfigPath(ctx);
   } else if (item.type === "mcp") {
     const payload = readStoreJsonPayload(item);
     let raw = readProjectConfigRaw(ctx);
     raw = applyEdits(raw, modify(raw, ["mcp", item.id], payload, FORMAT_OPTS));
     writeProjectConfig(ctx, raw);
+    return getProjectConfigPath(ctx);
   }
+  throw new Error(`OpenCode does not support installing items of type '${item.type}'.`);
 }
 
 // ── Sync primitives ─────────────────────────────────────────────────────────

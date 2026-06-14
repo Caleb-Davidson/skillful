@@ -318,8 +318,8 @@ export function getInstalledStateForTargets(
 
 // ── Install / toggle ──
 
-export function installItemForTarget(item: StoreItemMeta, targetId: TargetId, ctx?: ProjectContext): void {
-  getAdapter(targetId).installItem(item, ctx);
+export function installItemForTarget(item: StoreItemMeta, targetId: TargetId, ctx?: ProjectContext): string {
+  return getAdapter(targetId).installItem(item, ctx);
 }
 
 /**
