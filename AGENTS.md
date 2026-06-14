@@ -15,6 +15,7 @@ Before working on any system, you **MUST** read the relevant architecture docume
 - **[Project Context Architecture](docs/Projects.md)**: Project detection/registry intent and project-specific behavior boundaries.
 - **[Settings Architecture](docs/Settings.md)**: Defaults, source management intent, persistence boundaries, and first-run UX.
 - **[Sync Architecture](docs/Sync.md)**: Mirroring user-authored custom items across configured targets, conflict policy, and agent format conversion.
+- **[Agent CLI](docs/Agent-CLI.md)**: Non-interactive, JSON-only subcommand surface for automated callers (AI agents); command grammar, output contract, and explicit scope/target rules.
 - **[Architecture Decisions](docs/Decisions.md)**: Durable decisions and the rationale behind them.
 - **[Operational Playbook](docs/Operational-Playbook.md)**: Failure modes, expected behavior, and maintenance guidance.
 
