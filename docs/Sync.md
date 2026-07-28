@@ -12,7 +12,7 @@ Sync closes that gap. It discovers items present in any configured target but un
 
 Sync is intentionally narrow in v1:
 
-- **Categories:** agents, commands, skills. MCPs and providers are out of scope.
+- **Categories:** agents, commands, skills. Providers, MCPs, config, and includes are out of scope (includes are a single-target, project-root Claude-Code concern, not cross-target-mirrored content).
 - **Locality:** project-scoped only. Requires `skillful.targets.json` with at least two targets.
 - **Direction:** additive. Sync never deletes or renames; pruning is a separate operation.
 - **Identity:** only items whose `(type, id)` is absent from the merged store index are considered "custom." Items present in the store — even if hand-edited in place — are the store's responsibility and are skipped.

@@ -1,8 +1,8 @@
 // Item command family for the Agent CLI.
 //
-// Four verbs (list / info / install / remove) over the six item types
-// (agent, command, skill, provider, mcp, config) — 24 thin handlers generated
-// from a single type table. Each handler resolves the explicit-flag contract
+// Four verbs (list / info / install / remove) over the seven item types
+// (agent, command, skill, provider, mcp, config, include) — 28 thin handlers
+// generated from a single type table. Each handler resolves the explicit-flag contract
 // (--scope + --target, project context), loads the merged index once, calls an
 // existing target-manager function, and projects the result to the stable
 // envelope `data` shape. No new domain logic lives here.
@@ -43,7 +43,7 @@ interface FailedTarget {
 interface TypeRow {
   type: StoreItemType;
   plural: string;
-  viewKey: keyof Pick<StoreView, "agents" | "commands" | "skills" | "providers" | "mcps" | "configs">;
+  viewKey: keyof Pick<StoreView, "agents" | "commands" | "skills" | "providers" | "mcps" | "configs" | "includes">;
 }
 
 const TYPE_TABLE: TypeRow[] = [
@@ -53,6 +53,7 @@ const TYPE_TABLE: TypeRow[] = [
   { type: "provider", plural: "providers", viewKey: "providers" },
   { type: "mcp", plural: "mcps", viewKey: "mcps" },
   { type: "config", plural: "configs", viewKey: "configs" },
+  { type: "include", plural: "includes", viewKey: "includes" },
 ];
 
 /** Resolved, validated invocation shared by every item command. */

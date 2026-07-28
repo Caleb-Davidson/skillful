@@ -27,6 +27,12 @@ Capability metadata exists so the interface can:
 - communicate partial support clearly,
 - avoid silent failures.
 
+Capability can also be **scope-conditional**: a target may support a category only in project scope.
+For example, `include` items (project-root markdown for `@`-including from `AGENTS.md`) and the
+CLAUDE.md-redirect `config` item are Claude-Code-only and install to the project root, so they report
+partial support at global scope — the install is attempted and the adapter refuses with a clear reason
+rather than failing silently.
+
 ## Lazy activation
 
 Only the configured target adapter(s) are loaded at startup.

@@ -1,6 +1,6 @@
 // Types for the skillful store
 
-export type StoreItemType = "agent" | "command" | "skill" | "provider" | "mcp" | "config";
+export type StoreItemType = "agent" | "command" | "skill" | "provider" | "mcp" | "config" | "include";
 
 export type TargetId = "opencode" | "claude-code" | "codex";
 export type SupportMode = "yes" | "partial" | "no";
@@ -178,6 +178,8 @@ export interface StoreView {
   mcps: StoreItemWithState[];
   /** Built-in or target-specific configuration utilities (e.g. CLAUDE.md redirect) */
   configs: StoreItemWithState[];
+  /** Project-root markdown files meant to be @-included from AGENTS.md (e.g. a shared agent-workflow.md) */
+  includes: StoreItemWithState[];
   /** The active project/global context */
   context: ProjectContext;
   /**

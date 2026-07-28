@@ -511,16 +511,25 @@ export async function enrichStoreViewMismatchForTarget(view: StoreView, targetId
   const adapter = getAdapter(targetId);
   const context: ProjectContext = view.context ?? { mode: "global" };
 
-  const [agents, commands, skills, providers, mcps, configs] = await Promise.all([
+  const [agents, commands, skills, providers, mcps, configs, includes] = await Promise.all([
     enrichCategoryMismatch(view.agents, adapter, context),
     enrichCategoryMismatch(view.commands, adapter, context),
     enrichCategoryMismatch(view.skills, adapter, context),
     enrichCategoryMismatch(view.providers, adapter, context),
     enrichCategoryMismatch(view.mcps, adapter, context),
     enrichCategoryMismatch(view.configs, adapter, context),
+    enrichCategoryMismatch(view.includes, adapter, context),
   ]);
 
-  if (!agents.changed && !commands.changed && !skills.changed && !providers.changed && !mcps.changed && !configs.changed) {
+  if (
+    !agents.changed &&
+    !commands.changed &&
+    !skills.changed &&
+    !providers.changed &&
+    !mcps.changed &&
+    !configs.changed &&
+    !includes.changed
+  ) {
     return view;
   }
 
@@ -532,6 +541,7 @@ export async function enrichStoreViewMismatchForTarget(view: StoreView, targetId
     providers: providers.items,
     mcps: mcps.items,
     configs: configs.items,
+    includes: includes.items,
   };
 }
 
@@ -612,16 +622,25 @@ export async function enrichStoreViewMismatchForTargets(view: StoreView, targetI
   }
 
   const context: ProjectContext = view.context ?? { mode: "global" };
-  const [agents, commands, skills, providers, mcps, configs] = await Promise.all([
+  const [agents, commands, skills, providers, mcps, configs, includes] = await Promise.all([
     enrichCategoryAcrossTargets(view.agents, targetIds, context),
     enrichCategoryAcrossTargets(view.commands, targetIds, context),
     enrichCategoryAcrossTargets(view.skills, targetIds, context),
     enrichCategoryAcrossTargets(view.providers, targetIds, context),
     enrichCategoryAcrossTargets(view.mcps, targetIds, context),
     enrichCategoryAcrossTargets(view.configs, targetIds, context),
+    enrichCategoryAcrossTargets(view.includes, targetIds, context),
   ]);
 
-  if (!agents.changed && !commands.changed && !skills.changed && !providers.changed && !mcps.changed && !configs.changed) {
+  if (
+    !agents.changed &&
+    !commands.changed &&
+    !skills.changed &&
+    !providers.changed &&
+    !mcps.changed &&
+    !configs.changed &&
+    !includes.changed
+  ) {
     return view;
   }
 
@@ -633,6 +652,7 @@ export async function enrichStoreViewMismatchForTargets(view: StoreView, targetI
     providers: providers.items,
     mcps: mcps.items,
     configs: configs.items,
+    includes: includes.items,
   };
 }
 
@@ -660,6 +680,7 @@ export function buildStoreViewForTarget(items: StoreItemMeta[], targetId: Target
     providers: withState.filter((i) => i.type === "provider"),
     mcps: withState.filter((i) => i.type === "mcp"),
     configs: withState.filter((i) => i.type === "config"),
+    includes: withState.filter((i) => i.type === "include"),
     context,
     targetId,
     targetIds: [targetId],
@@ -689,6 +710,7 @@ export function buildStoreViewForTargets(items: StoreItemMeta[], targetIds: Targ
     providers: withState.filter((i) => i.type === "provider"),
     mcps: withState.filter((i) => i.type === "mcp"),
     configs: withState.filter((i) => i.type === "config"),
+    includes: withState.filter((i) => i.type === "include"),
     context,
     targetId: targetIds[0],
     targetIds: [...targetIds],

@@ -4,13 +4,14 @@
 
 `skillful` is a terminal application for managing OpenCode configuration content.
 
-It helps users discover, install, update, and remove five categories of reusable content:
+It helps users discover, install, update, and remove six categories of reusable content:
 
 - agents
 - commands
 - skills
 - providers
 - MCP servers
+- project includes (frontmatter-free markdown installed to a project root for `@`-including from `AGENTS.md`)
 
 ## Why it exists
 

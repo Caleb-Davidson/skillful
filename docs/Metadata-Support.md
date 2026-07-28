@@ -10,7 +10,7 @@ The goal is to keep store authoring predictable and avoid assumptions that every
 
 Item identity is based on `(type, id)` and source priority determines winners on collisions.
 
-- `type` comes from folder category (`agents`, `commands`, `skills`, `providers`, `mcps`).
+- `type` comes from folder category (`agents`, `commands`, `skills`, `providers`, `mcps`, `includes`).
 - `id` comes from filename/folder naming conventions.
 - Frontmatter does not override identity.
 
@@ -41,6 +41,18 @@ These fields currently affect `skillful` logic directly.
 ### MCP (`store/mcps/<id>.json`)
 
 - `_meta.description` (`string`, required): if missing, MCP item is skipped.
+
+### Include (`store/includes/<id>.md`)
+
+Include items are **frontmatter-free** plain markdown — the whole point is that they are `@`-included
+verbatim into a project's `AGENTS.md`, so no YAML may leak into that context. Consequently there is no
+metadata to interpret:
+
+- `description` is **derived from the file's first ATX heading** (its text with leading `#` stripped),
+  falling back to the first non-empty line, then to `Include: <id>`.
+- `id` is the filename without `.md`.
+- There is no `targets` key; includes are Claude-Code-only and project-scoped by capability (they
+  install to `<project>/<id>.md`), not by frontmatter.
 
 ## Target allow-list (`targets`)
 

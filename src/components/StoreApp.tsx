@@ -148,6 +148,7 @@ function DetailPanel({ item, isProjectMode, targetIds }: DetailPanelProps) {
     provider: "provider",
     mcp: "mcp server",
     config: "config",
+    include: "include",
   };
 
   const status = item.state.status;
@@ -272,7 +273,7 @@ interface ManageViewProps {
   onSwitchView: (view: AppView) => void;
 }
 
-type Category = "agents" | "commands" | "skills" | "providers" | "mcps" | "configs";
+type Category = "agents" | "commands" | "skills" | "providers" | "mcps" | "configs" | "includes";
 const CATEGORIES: { key: Category; label: string; type: StoreItemType }[] = [
   { key: "agents", label: "Agents", type: "agent" },
   { key: "commands", label: "Commands", type: "command" },
@@ -280,6 +281,7 @@ const CATEGORIES: { key: Category; label: string; type: StoreItemType }[] = [
   { key: "providers", label: "Providers", type: "provider" },
   { key: "mcps", label: "MCPs", type: "mcp" },
   { key: "configs", label: "Config", type: "config" },
+  { key: "includes", label: "Includes", type: "include" },
 ];
 
 function ManageView({ view, onViewChanged, onSwitchView }: ManageViewProps) {
@@ -509,13 +511,14 @@ export default function StoreApp({ initialView, initialAppView = "manage", force
   // Mismatch enrichment runs in the background per target.
   useEffect(() => {
     const targetIds = storeView.targetIds ?? (storeView.targetId ? [storeView.targetId] : ["opencode"]);
-    const categories: Array<keyof Pick<StoreView, "agents" | "commands" | "skills" | "providers" | "mcps" | "configs">> = [
+    const categories: Array<keyof Pick<StoreView, "agents" | "commands" | "skills" | "providers" | "mcps" | "configs" | "includes">> = [
       "agents",
       "commands",
       "skills",
       "providers",
       "mcps",
       "configs",
+      "includes",
     ];
 
     const hasPendingChecks = categories.some((category) =>

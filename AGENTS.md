@@ -66,7 +66,11 @@ store/
   skills/
   providers/
   mcps/
+  includes/     # plain-markdown files installed to the project root, for @-including from AGENTS.md
 ```
+
+Includes are frontmatter-free `.md` files; their store listing description is derived from the first
+heading/line. They are Claude-Code-only and project-scoped (they install to `<project>/<id>.md`).
 
 - Priority merge rule: first source by priority wins for duplicate `(type,id)`.
 

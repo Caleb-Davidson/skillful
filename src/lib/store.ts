@@ -278,6 +278,49 @@ function scanMcps(storePath: string, source?: ScanSourceMeta): StoreItemMeta[] {
   return results;
 }
 
+/**
+ * Derive a store listing description from a plain-markdown include file: the
+ * text of its first ATX heading, else its first non-empty line, else a default.
+ * Include files carry no frontmatter (that is the whole point — they are
+ * `@`-included verbatim into AGENTS.md), so there is nowhere else to read it.
+ */
+function deriveIncludeDescription(raw: string, id: string): string {
+  for (const line of raw.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (trimmed.length === 0) continue;
+    return trimmed.replace(/^#+\s*/, "");
+  }
+  return `Include: ${id}`;
+}
+
+function scanIncludes(storePath: string, source?: ScanSourceMeta): StoreItemMeta[] {
+  const includesDir = path.join(storePath, "includes");
+  if (!fs.existsSync(includesDir)) return [];
+
+  const results: StoreItemMeta[] = [];
+  for (const file of fs.readdirSync(includesDir)) {
+    if (!file.endsWith(".md")) continue;
+    const filePath = path.join(includesDir, file);
+    const raw = fs.readFileSync(filePath, "utf-8");
+    const id = path.basename(file, ".md");
+    results.push(
+      attachSource(
+        {
+          id,
+          type: "include" as StoreItemType,
+          name: id,
+          description: deriveIncludeDescription(raw, id),
+          tags: ["include", "project"],
+          path: `includes/${file}`,
+          storeHash: hashNormalizedText(raw),
+        },
+        source
+      )
+    );
+  }
+  return results;
+}
+
 export function buildIndexFromStorePath(storePath: string, source?: ScanSourceMeta): StoreIndex {
   const items: StoreItemMeta[] = [
     ...scanAgents(storePath, source),
@@ -285,6 +328,7 @@ export function buildIndexFromStorePath(storePath: string, source?: ScanSourceMe
     ...scanSkills(storePath, source),
     ...scanProviders(storePath, source),
     ...scanMcps(storePath, source),
+    ...scanIncludes(storePath, source),
   ];
   return { version: 3, items };
 }

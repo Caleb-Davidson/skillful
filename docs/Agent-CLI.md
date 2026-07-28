@@ -66,8 +66,8 @@ the source was registered but is not yet usable.
 
 ### Items (`--scope` **and** `--target` required)
 
-A matrix of four verbs over six item types
-(`agent` `command` `skill` `provider` `mcp` `config`):
+A matrix of four verbs over seven item types
+(`agent` `command` `skill` `provider` `mcp` `config` `include`):
 
 ```text
 list    <type>           # many   → buildStoreViewForTargets()[type]

@@ -157,3 +157,16 @@ Why:
 - both Claude Code and OpenCode accept `model:` in command frontmatter, but the value vocabularies differ per target (e.g. `sonnet` is not an OpenCode provider/model id), so a source-shipped value is wrong on at least one target,
 - stripping on both write and compare lets users set a local `model:` preference without the item showing as drifted, which would force them to choose between their preference and reinstalls,
 - centralizing the list keeps the policy expandable — `effort` or future non-portable keys can be added in one place and the install/compare pipelines stay aligned.
+
+## Include items install to the project root as frontmatter-free markdown
+
+Decision:
+
+- The `include` item type ships plain markdown from `store/includes/<id>.md` and installs it to the project root as `<project>/<id>.md`, so a project's `AGENTS.md` can pull it in with an `@<id>.md` reference. Include files carry no frontmatter; the store listing description is derived from the first heading/line. Includes are Claude-Code-only and project-scoped — a global install is attempted and refused by the adapter, mirroring the CLAUDE.md-redirect `config` item.
+
+Why:
+
+- an always-in-context shared instruction block (e.g. a common agent workflow) belongs inlined via `@include`, not loaded on demand like a skill — `AGENTS.md` already composes this way with `@docs/*.md`, so the mechanism is idiomatic rather than new,
+- frontmatter would render as literal text where the file is `@`-included, so the type deliberately forbids it and derives its metadata from the content instead,
+- the project root install path (rather than a `.claude/` subdirectory) keeps the `@`-reference short and matches the existing CLAUDE.md-redirect precedent for project-root files,
+- distributing the shared block through the store lets one edit propagate to every repo via `skillful install`, while each repo keeps its own project-specific companion files (e.g. a `project-context` skill) untouched.

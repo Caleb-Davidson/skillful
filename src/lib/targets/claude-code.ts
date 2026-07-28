@@ -16,6 +16,7 @@ const CLAUDE_CAPABILITIES: CapabilityMap = {
   provider: "no",
   mcp: "yes",
   config: "yes",
+  include: "yes",
 };
 
 function supportFor(item: StoreItemMeta, ctx?: ProjectContext): Pick<InstalledState, "supported" | "supportMode" | "supportReason"> {
@@ -40,6 +41,14 @@ function supportFor(item: StoreItemMeta, ctx?: ProjectContext): Pick<InstalledSt
       supported: true,
       supportMode: "partial",
       supportReason: "This config utility requires a project context; switch to a project to install.",
+    };
+  }
+
+  if (item.type === "include" && (!ctx || ctx.mode !== "project")) {
+    return {
+      supported: true,
+      supportMode: "partial",
+      supportReason: "Include files install into the project root; switch to a project to install.",
     };
   }
 

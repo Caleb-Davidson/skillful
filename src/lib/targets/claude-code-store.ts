@@ -62,6 +62,9 @@ function getFileInstallPath(item: StoreItemMeta, ctx?: ProjectContext): string |
   if (item.type === "config" && item.id === CLAUDE_MD_REDIRECT_ID) {
     return ctx?.projectDir ? path.join(ctx.projectDir, "CLAUDE.md") : null;
   }
+  if (item.type === "include") {
+    return ctx?.projectDir ? path.join(ctx.projectDir, `${item.id}.md`) : null;
+  }
   const baseDir = !ctx || ctx.mode === "global" ? getGlobalClaudeDir() : getProjectClaudeDir(ctx);
   if (item.type === "agent") return path.join(baseDir, "agents", `${item.id}.md`);
   if (item.type === "command") return path.join(baseDir, "commands", `${item.id}.md`);
@@ -280,8 +283,8 @@ function isClaudeMdRedirect(item: StoreItemMeta): boolean {
 }
 
 function getGlobalInstalledState(item: StoreItemMeta): InstalledState {
-  // Config items are project-scoped; never installed at the user/global level.
-  if (item.type === "config") {
+  // Config and include items are project-scoped; never installed at the user/global level.
+  if (item.type === "config" || item.type === "include") {
     return { installed: false };
   }
   const files = getGlobalFiles();
@@ -322,6 +325,13 @@ function getProjectInstalledState(item: StoreItemMeta, ctx: ProjectContext): Ins
       return { installed: false };
     }
     return { installed: true, installedVia: "file", mismatchChecked: false };
+  }
+
+  if (item.type === "include") {
+    const filePath = path.join(ctx.projectDir!, `${item.id}.md`);
+    return fs.existsSync(filePath)
+      ? { installed: true, installedVia: "file", mismatchChecked: false }
+      : { installed: false };
   }
 
   const files = getProjectFiles(ctx);
@@ -474,6 +484,10 @@ function installConfigItem(item: StoreItemMeta, ctx?: ProjectContext): string {
 function installItemGlobal(item: StoreItemMeta, srcPath: string): string {
   const baseDir = getGlobalClaudeDir();
 
+  if (item.type === "include") {
+    throw new Error("Include files install into the project root; switch to a project to install this item.");
+  }
+
   if (item.type === "agent") {
     if (!item.path.endsWith(".md")) {
       throw new Error(`Claude Code supports only .md agents. Received: ${item.path}`);
@@ -520,6 +534,12 @@ function installItemGlobal(item: StoreItemMeta, srcPath: string): string {
 
 function installItemProject(item: StoreItemMeta, ctx: ProjectContext, srcPath: string): string {
   const baseDir = getProjectClaudeDir(ctx);
+
+  if (item.type === "include") {
+    const destPath = path.join(ctx.projectDir!, `${item.id}.md`);
+    fs.copyFileSync(srcPath, destPath);
+    return destPath;
+  }
 
   if (item.type === "agent") {
     if (!item.path.endsWith(".md")) {
@@ -707,6 +727,12 @@ function uninstallItemProject(item: StoreItemMeta, ctx: ProjectContext): void {
   const state = getProjectInstalledState(item, ctx);
   if (!state.installed) return;
   const baseDir = getProjectClaudeDir(ctx);
+
+  if (item.type === "include") {
+    const filePath = path.join(ctx.projectDir!, `${item.id}.md`);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    return;
+  }
 
   if (state.installedVia === "file") {
     if (item.type === "agent") {
