@@ -1,14 +1,11 @@
 // End-to-end proof that a store skill installs as its whole directory: supporting
 // files are copied, a reinstall replaces the folder, and mismatch detection covers
-// every file in it. Installs run through the real CLI as a child process, fully
-// offline. The agent CLI never computes mismatch (list/info report the unenriched
-// state), so mismatch is checked in-process through each adapter's getMismatchState,
-// against the item the child indexed into the cached source index.
+// every file in it, as `info` reports it. Everything runs through the real CLI as a
+// child process, fully offline.
 //
 // SAFETY: identical isolation to e2e.test.ts — USERPROFILE/HOME are pinned to a
 // throwaway temp dir for every child, and the project is a throwaway dir passed via
-// --project. The in-process adapter calls are project-scoped, so they never read
-// the real home directory.
+// --project.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -18,9 +15,6 @@ import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import { spawnSync, execFileSync } from "node:child_process";
 import type { Envelope } from "../../types.js";
-import type { ProjectContext, StoreIndex, StoreItemMeta } from "../../../types.js";
-import * as claudeCode from "../../../targets/claude-code-store.js";
-import * as openCode from "../../../targets/opencode-store.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "..", "..", "..", "..", "..");
@@ -81,18 +75,16 @@ function runCli(args: string[], tmpHome: string): { code: number | null; env: En
   return { code: result.status, env, stdout: result.stdout };
 }
 
-/** The skill as the child process indexed it into the cached source index. */
-function readIndexedSkill(tmpHome: string): StoreItemMeta {
-  const indexPath = path.join(tmpHome, ".cache", "skillful", "sources", SOURCE_ID, "index.json");
-  const index = JSON.parse(fs.readFileSync(indexPath, "utf-8")) as StoreIndex;
-  const item = index.items.find((i) => i.type === "skill" && i.id === SKILL_ID);
-  assert.ok(item, `skill '${SKILL_ID}' should be in the cached index`);
-  return item;
+interface InfoItem {
+  storeHash: string | null;
+  state: { status: string | null; mismatch: boolean; perTarget: { targetId: string; mismatch: boolean }[] };
 }
 
-async function claudeMismatch(item: StoreItemMeta, ctx: ProjectContext): Promise<boolean | undefined> {
-  claudeCode.invalidateCache();
-  return (await claudeCode.getMismatchState(item, ctx)).mismatch;
+/** The skill as `info` reports it for the given scope and target flags. */
+function infoSkill(flags: string[], tmpHome: string): InfoItem {
+  const info = runCli(["info", "skill", SKILL_ID, ...flags], tmpHome);
+  assert.equal(info.env.ok, true, `info; stdout: ${info.stdout}`);
+  return (info.env.data as { item: InfoItem }).item;
 }
 
 function readLf(file: string): string {
@@ -108,7 +100,6 @@ test("e2e: a skill installs, drifts, and reinstalls as its whole directory (clau
   const { repo, skillDir } = makeStoreRepo();
   const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), "skillful-skilldir-home-"));
   const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), "skillful-skilldir-proj-"));
-  const ctx: ProjectContext = { mode: "project", projectDir };
   const installedDir = path.join(projectDir, ".claude", "skills", SKILL_ID);
   const proj = ["--scope", "project", "--project", projectDir, "--target", "claude-code"];
 
@@ -121,12 +112,19 @@ test("e2e: a skill installs, drifts, and reinstalls as its whole directory (clau
   assert.equal(readLf(path.join(installedDir, "finder.md")), FINDER);
   assert.equal(readLf(path.join(installedDir, "angles", "correctness.md")), CORRECTNESS);
 
-  const item = readIndexedSkill(tmpHome);
-  assert.equal(await claudeMismatch(item, ctx), false, "no mismatch right after install");
+  const item = infoSkill(proj, tmpHome);
+  assert.equal(item.state.mismatch, false, "no mismatch right after install");
+  assert.equal(item.state.status, "installed");
 
-  // editing only a supporting file is drift
+  // editing only a supporting file is drift, reported as an older version
   fs.writeFileSync(path.join(installedDir, "angles", "correctness.md"), "Locally edited.\n", "utf-8");
-  assert.equal(await claudeMismatch(item, ctx), true, "an edited supporting file is a mismatch");
+  const drifted = infoSkill(proj, tmpHome);
+  assert.equal(drifted.state.mismatch, true, "an edited supporting file is a mismatch");
+  assert.equal(drifted.state.status, "older-version");
+  assert.deepEqual(
+    drifted.state.perTarget.map((p) => [p.targetId, p.mismatch]),
+    [["claude-code", true]]
+  );
 
   // store commit: delete one supporting file, edit another
   const editedFinder = "Find candidates, then rank them.\n";
@@ -148,9 +146,10 @@ test("e2e: a skill installs, drifts, and reinstalls as its whole directory (clau
   );
   assert.equal(readLf(path.join(installedDir, "finder.md")), editedFinder);
 
-  const updatedItem = readIndexedSkill(tmpHome);
+  const updatedItem = infoSkill(proj, tmpHome);
   assert.notEqual(updatedItem.storeHash, item.storeHash, "the store hash covers supporting files");
-  assert.equal(await claudeMismatch(updatedItem, ctx), false, "no mismatch after reinstalling the updated skill");
+  assert.equal(updatedItem.state.mismatch, false, "no mismatch after reinstalling the updated skill");
+  assert.equal(updatedItem.state.status, "installed");
 });
 
 test("e2e: an OpenCode skill install copies the whole directory (offline)", { timeout: 120000 }, async (t) => {
@@ -162,21 +161,18 @@ test("e2e: an OpenCode skill install copies the whole directory (offline)", { ti
   const { repo } = makeStoreRepo();
   const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), "skillful-skilldir-home2-"));
   const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), "skillful-skilldir-proj2-"));
-  const ctx: ProjectContext = { mode: "project", projectDir };
   const installedDir = path.join(projectDir, ".opencode", "skills", SKILL_ID);
+  const proj = ["--scope", "project", "--project", projectDir, "--target", "opencode"];
 
   const added = runCli(["add", "source", repo, "--id", SOURCE_ID], tmpHome);
   assert.equal(added.env.ok, true, `add source; stdout: ${added.stdout}`);
 
-  const installed = runCli(
-    ["install", "skill", SKILL_ID, "--scope", "project", "--project", projectDir, "--target", "opencode"],
-    tmpHome
-  );
+  const installed = runCli(["install", "skill", SKILL_ID, ...proj], tmpHome);
   assert.equal(installed.env.ok, true, `install; stdout: ${installed.stdout}`);
   assert.equal(readLf(path.join(installedDir, "finder.md")), FINDER);
   assert.equal(readLf(path.join(installedDir, "angles", "correctness.md")), CORRECTNESS);
+  assert.equal(infoSkill(proj, tmpHome).state.mismatch, false, "no mismatch right after install");
 
-  const item = readIndexedSkill(tmpHome);
-  openCode.invalidateCache();
-  assert.equal((await openCode.getMismatchState(item, ctx)).mismatch, false, "no mismatch right after install");
+  fs.writeFileSync(path.join(installedDir, "finder.md"), "Locally edited.\n", "utf-8");
+  assert.equal(infoSkill(proj, tmpHome).state.status, "older-version", "an edited supporting file is an older version");
 });

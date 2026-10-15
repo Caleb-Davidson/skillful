@@ -461,93 +461,10 @@ export function toggleItemForTargets(
 
 // ── Mismatch enrichment ──
 
-async function enrichSingleTargetItem(
-  item: StoreItemWithState,
-  adapter: TargetAdapter,
-  ctx: ProjectContext
-): Promise<{ item: StoreItemWithState; changed: boolean }> {
-  if (!item.state.installed || item.state.mismatchChecked === true) {
-    return { item, changed: false };
-  }
-  try {
-    const mismatch = adapter.getMismatchState
-      ? await adapter.getMismatchState(item, ctx)
-      : { mismatch: false, mismatchChecked: true };
-    const nextState: InstalledState = {
-      ...item.state,
-      mismatch: mismatch.mismatch ?? false,
-      mismatchChecked: mismatch.mismatchChecked ?? true,
-    };
-    if (nextState.mismatch === item.state.mismatch && nextState.mismatchChecked === item.state.mismatchChecked) {
-      return { item, changed: false };
-    }
-    return { item: { ...item, state: nextState }, changed: true };
-  } catch {
-    const nextState: InstalledState = {
-      ...item.state,
-      mismatch: false,
-      mismatchChecked: true,
-    };
-    if (nextState.mismatchChecked === item.state.mismatchChecked && nextState.mismatch === item.state.mismatch) {
-      return { item, changed: false };
-    }
-    return { item: { ...item, state: nextState }, changed: true };
-  }
-}
-
-async function enrichCategoryMismatch(
-  items: StoreItemWithState[],
-  adapter: TargetAdapter,
-  ctx: ProjectContext
-): Promise<{ items: StoreItemWithState[]; changed: boolean }> {
-  const results = await Promise.all(items.map((item) => enrichSingleTargetItem(item, adapter, ctx)));
-  return {
-    items: results.map((r) => r.item),
-    changed: results.some((r) => r.changed),
-  };
-}
-
-export async function enrichStoreViewMismatchForTarget(view: StoreView, targetId: TargetId): Promise<StoreView> {
-  const adapter = getAdapter(targetId);
-  const context: ProjectContext = view.context ?? { mode: "global" };
-
-  const [agents, commands, skills, providers, mcps, configs, includes] = await Promise.all([
-    enrichCategoryMismatch(view.agents, adapter, context),
-    enrichCategoryMismatch(view.commands, adapter, context),
-    enrichCategoryMismatch(view.skills, adapter, context),
-    enrichCategoryMismatch(view.providers, adapter, context),
-    enrichCategoryMismatch(view.mcps, adapter, context),
-    enrichCategoryMismatch(view.configs, adapter, context),
-    enrichCategoryMismatch(view.includes, adapter, context),
-  ]);
-
-  if (
-    !agents.changed &&
-    !commands.changed &&
-    !skills.changed &&
-    !providers.changed &&
-    !mcps.changed &&
-    !configs.changed &&
-    !includes.changed
-  ) {
-    return view;
-  }
-
-  return {
-    ...view,
-    agents: agents.items,
-    commands: commands.items,
-    skills: skills.items,
-    providers: providers.items,
-    mcps: mcps.items,
-    configs: configs.items,
-    includes: includes.items,
-  };
-}
-
 /**
- * Multi-target mismatch enrichment: fan out per target, then re-aggregate so
- * the rollup `status` reflects the freshly-checked per-target mismatches.
+ * Mismatch enrichment: fan out per target, then re-aggregate so the rollup
+ * `status` reflects the freshly-checked per-target mismatches. Single-target
+ * views carry `perTarget` too, so they take this path as well.
  */
 async function enrichItemAcrossTargets(
   item: StoreItemWithState,
@@ -616,11 +533,6 @@ async function enrichCategoryAcrossTargets(
 }
 
 export async function enrichStoreViewMismatchForTargets(view: StoreView, targetIds: TargetId[]): Promise<StoreView> {
-  // Fall back to the single-target path when there's nothing to aggregate.
-  if (targetIds.length === 1) {
-    return enrichStoreViewMismatchForTarget(view, targetIds[0]);
-  }
-
   const context: ProjectContext = view.context ?? { mode: "global" };
   const [agents, commands, skills, providers, mcps, configs, includes] = await Promise.all([
     enrichCategoryAcrossTargets(view.agents, targetIds, context),

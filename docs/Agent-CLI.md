@@ -170,6 +170,9 @@ since the internal type nests a full `InstalledState` per target):
 }
 ```
 
+`list` and `info` compare every installed item with the store's copy (for a skill, every file in its
+folder), so `mismatch` and `status: "older-version"` report drift just as the TUI's `!` does.
+
 **Source** (projection of `StoreSource`; drops internal head-tracking fields):
 
 ```jsonc

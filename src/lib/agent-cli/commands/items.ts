@@ -11,6 +11,7 @@ import { loadMergedIndexFromConfiguredSources } from "../../source-sync.js";
 import {
   buildStoreViewForTargets,
   eligibleTargetsForItem,
+  enrichStoreViewMismatchForTargets,
   getInstalledStateForTargets,
   initAdapters,
   installItemForTarget,
@@ -130,6 +131,12 @@ function buildSkipped(
   });
 }
 
+/** Build the store view for the matching items and compare each installed one against the store. */
+async function buildCheckedView(resolved: ResolvedContext, match: (item: StoreItemMeta) => boolean): Promise<StoreView> {
+  const view = buildStoreViewForTargets(resolved.items.filter(match), resolved.targets, resolved.projectCtx);
+  return enrichStoreViewMismatchForTargets(view, resolved.targets);
+}
+
 // ── list <plural> ──
 
 function makeListCommand(row: TypeRow): CommandDef {
@@ -139,7 +146,7 @@ function makeListCommand(row: TypeRow): CommandDef {
     summary: `List ${row.plural} available across the requested targets.`,
     async run(ctx): Promise<CommandResult> {
       const resolved = await resolve(ctx);
-      const view = buildStoreViewForTargets(resolved.items, resolved.targets, resolved.projectCtx);
+      const view = await buildCheckedView(resolved, (i) => i.type === row.type);
       const rows = view[row.viewKey];
       return {
         data: {
@@ -164,7 +171,7 @@ function makeInfoCommand(row: TypeRow): CommandDef {
     async run(ctx): Promise<CommandResult> {
       const resolved = await resolve(ctx);
       const id = requireItemId(ctx, row.type, "info");
-      const view = buildStoreViewForTargets(resolved.items, resolved.targets, resolved.projectCtx);
+      const view = await buildCheckedView(resolved, (i) => i.type === row.type && i.id === id);
       const found = view[row.viewKey].find((i) => i.id === id);
       if (!found) {
         throw new CliError("ITEM_NOT_FOUND", `No ${row.type} with id '${id}' in configured sources.`, {
