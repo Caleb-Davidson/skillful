@@ -7,6 +7,7 @@ import matter from "gray-matter";
 import { parse as parseJsonc } from "jsonc-parser";
 import { hashCanonicalJson, hashNormalizedText } from "./hash.js";
 import { toYaml } from "./agent-format.js";
+import { hashSkillDir } from "./skill-dir.js";
 import type {
   StoreIndex,
   StoreItemMeta,
@@ -169,7 +170,8 @@ function scanSkills(storePath: string, source?: ScanSourceMeta): StoreItemMeta[]
   const results: StoreItemMeta[] = [];
   for (const entry of fs.readdirSync(skillsDir, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
-    const skillFile = path.join(skillsDir, entry.name, "SKILL.md");
+    const skillDir = path.join(skillsDir, entry.name);
+    const skillFile = path.join(skillDir, "SKILL.md");
     if (!fs.existsSync(skillFile)) continue;
 
     const raw = fs.readFileSync(skillFile, "utf-8");
@@ -196,7 +198,7 @@ function scanSkills(storePath: string, source?: ScanSourceMeta): StoreItemMeta[]
             targetIds
           ),
           path: `skills/${entry.name}/SKILL.md`,
-          storeHash: hashNormalizedText(raw),
+          storeHash: hashSkillDir(skillDir),
           targetIds,
         },
         source
@@ -321,6 +323,13 @@ function scanIncludes(storePath: string, source?: ScanSourceMeta): StoreItemMeta
   return results;
 }
 
+/**
+ * Shape version of a cached per-source index. Bump it whenever an item's
+ * indexed fields change meaning (e.g. how `storeHash` is computed), so stale
+ * caches are rebuilt instead of trusted.
+ */
+export const STORE_INDEX_VERSION = 4;
+
 export function buildIndexFromStorePath(storePath: string, source?: ScanSourceMeta): StoreIndex {
   const items: StoreItemMeta[] = [
     ...scanAgents(storePath, source),
@@ -330,7 +339,7 @@ export function buildIndexFromStorePath(storePath: string, source?: ScanSourceMe
     ...scanMcps(storePath, source),
     ...scanIncludes(storePath, source),
   ];
-  return { version: 3, items };
+  return { version: STORE_INDEX_VERSION, items };
 }
 
 export function resolveStoreItemPath(item: StoreItemMeta): string {
@@ -357,7 +366,7 @@ export function mergeIndexesBySourcePriority(sources: Array<{ source: StoreSourc
   }
 
   return {
-    version: 3,
+    version: STORE_INDEX_VERSION,
     items: [...winners.values()],
   };
 }

@@ -20,6 +20,7 @@ const { saveSourceRegistry } = await import("../../../sources.js");
 const { getSourceIndexPath, getSourceRepoDir } = await import("../../../sources.js");
 const { initAdapters } = await import("../../../target-manager.js");
 const { loadMergedIndexFromConfiguredSources } = await import("../../../source-sync.js");
+const { STORE_INDEX_VERSION } = await import("../../../store.js");
 import type { Envelope } from "../../types.js";
 import type { StoreIndex, StoreItemMeta } from "../../../types.js";
 
@@ -75,7 +76,7 @@ function seedCommandSource(sourceId = "fixture"): void {
     sourceRoot: repoDir,
     storeHash: "deadbeef",
   };
-  const index: StoreIndex = { version: 3, items: [item] };
+  const index: StoreIndex = { version: STORE_INDEX_VERSION, items: [item] };
 
   // Write the cache index WITHOUT a BOM (fs.writeFileSync, not Set-Content).
   const indexPath = getSourceIndexPath(sourceId);

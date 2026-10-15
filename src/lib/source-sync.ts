@@ -3,7 +3,7 @@ import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { getBuiltinStoreItems } from "./builtins.js";
-import { buildIndexFromStorePath, mergeIndexesBySourcePriority } from "./store.js";
+import { STORE_INDEX_VERSION, buildIndexFromStorePath, mergeIndexesBySourcePriority } from "./store.js";
 import {
   ensureSourceDirectories,
   getSourceCacheDir,
@@ -186,7 +186,8 @@ export async function ensureSourceIndexed(source: StoreSource): Promise<StoreSou
       lastError: undefined,
     };
 
-    const needsReindex = !cachedIndex || !head || next.indexedHead !== head;
+    const needsReindex =
+      !cachedIndex || cachedIndex.version !== STORE_INDEX_VERSION || !head || next.indexedHead !== head;
     if (needsReindex) {
       next = reindexSource(next);
     }
@@ -231,7 +232,7 @@ export async function loadMergedIndexFromConfiguredSources(): Promise<{ index: S
   const builtinItems = getBuiltinStoreItems();
 
   if (enabled.length === 0) {
-    return { index: { version: 3, items: [...builtinItems] }, sources: registry.sources };
+    return { index: { version: STORE_INDEX_VERSION, items: [...builtinItems] }, sources: registry.sources };
   }
 
   const refreshedSources: StoreSource[] = [];

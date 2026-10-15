@@ -170,3 +170,16 @@ Why:
 - frontmatter would render as literal text where the file is `@`-included, so the type deliberately forbids it and derives its metadata from the content instead,
 - the project root install path (rather than a `.claude/` subdirectory) keeps the `@`-reference short and matches the existing CLAUDE.md-redirect precedent for project-root files,
 - distributing the shared block through the store lets one edit propagate to every repo via `skillful install`, while each repo keeps its own project-specific companion files (e.g. a `project-context` skill) untouched.
+
+## A skill is its directory
+
+Decision:
+
+- A store skill is the whole `store/skills/<folder>/`, not just its SKILL.md. Every target installs the full folder, and a store install replaces the installed folder rather than copying over it. A skill's `storeHash` and the installed-side mismatch check both hash every file in the folder (`hashSkillDir` in `src/lib/skill-dir.ts`, shared with sync's skill fingerprint).
+
+Why:
+
+- skills ship supporting files (angle prompts, reference docs) that SKILL.md loads on demand, so installing SKILL.md alone leaves a broken skill,
+- replacing the folder keeps the install an exact mirror of the store, so a file removed upstream does not linger and keep being loaded,
+- hashing only SKILL.md would hide drift in a supporting file, so editing one would never show the mismatch indicator,
+- the index `version` is bumped whenever a stored hash changes meaning, so caches built by an older release are rebuilt instead of reporting false mismatches.
