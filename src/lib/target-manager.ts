@@ -468,7 +468,6 @@ export function toggleItemForTargets(
  */
 async function enrichItemAcrossTargets(
   item: StoreItemWithState,
-  targetIds: TargetId[],
   ctx: ProjectContext
 ): Promise<{ item: StoreItemWithState; changed: boolean }> {
   const perTarget = item.state.perTarget;
@@ -525,23 +524,22 @@ async function enrichItemAcrossTargets(
 
 async function enrichCategoryAcrossTargets(
   items: StoreItemWithState[],
-  targetIds: TargetId[],
   ctx: ProjectContext
 ): Promise<{ items: StoreItemWithState[]; changed: boolean }> {
-  const results = await Promise.all(items.map((item) => enrichItemAcrossTargets(item, targetIds, ctx)));
+  const results = await Promise.all(items.map((item) => enrichItemAcrossTargets(item, ctx)));
   return { items: results.map((r) => r.item), changed: results.some((r) => r.changed) };
 }
 
-export async function enrichStoreViewMismatchForTargets(view: StoreView, targetIds: TargetId[]): Promise<StoreView> {
+export async function enrichStoreViewMismatchForTargets(view: StoreView): Promise<StoreView> {
   const context: ProjectContext = view.context ?? { mode: "global" };
   const [agents, commands, skills, providers, mcps, configs, includes] = await Promise.all([
-    enrichCategoryAcrossTargets(view.agents, targetIds, context),
-    enrichCategoryAcrossTargets(view.commands, targetIds, context),
-    enrichCategoryAcrossTargets(view.skills, targetIds, context),
-    enrichCategoryAcrossTargets(view.providers, targetIds, context),
-    enrichCategoryAcrossTargets(view.mcps, targetIds, context),
-    enrichCategoryAcrossTargets(view.configs, targetIds, context),
-    enrichCategoryAcrossTargets(view.includes, targetIds, context),
+    enrichCategoryAcrossTargets(view.agents, context),
+    enrichCategoryAcrossTargets(view.commands, context),
+    enrichCategoryAcrossTargets(view.skills, context),
+    enrichCategoryAcrossTargets(view.providers, context),
+    enrichCategoryAcrossTargets(view.mcps, context),
+    enrichCategoryAcrossTargets(view.configs, context),
+    enrichCategoryAcrossTargets(view.includes, context),
   ]);
 
   if (

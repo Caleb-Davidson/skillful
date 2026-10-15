@@ -233,7 +233,7 @@ targets: codex
 Skill content.
 ```
 
-A skill is its whole folder: everything under `store/skills/<folder>/` installs with it, so SKILL.md can reference supporting files beside it (on Claude Code, through `${CLAUDE_SKILL_DIR}`). A reinstall replaces the installed folder, so a file deleted from the store is deleted on install too. Mismatch detection covers every file in the folder, so editing only a supporting file shows `!`.
+A skill is its whole folder: everything under `store/skills/<folder>/` installs with it, so SKILL.md can reference supporting files beside it (on Claude Code, through `${CLAUDE_SKILL_DIR}`). A reinstall replaces the installed folder, so a file deleted from the store is deleted on install too. On targets with mismatch detection (Claude Code and OpenCode), it covers every file in the folder, so editing only a supporting file shows `!`.
 
 `targets` is optional for agents, commands, and skills. When present, the item is only shown for the listed targets (`opencode`, `claude-code`, `codex`).
 

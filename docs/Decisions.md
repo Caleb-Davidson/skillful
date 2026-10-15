@@ -175,7 +175,7 @@ Why:
 
 Decision:
 
-- A store skill is the whole `store/skills/<folder>/`, not just its SKILL.md. Every target installs the full folder, and a store install replaces the installed folder rather than copying over it. A skill's `storeHash` and the installed-side mismatch check both hash every file in the folder (`hashSkillDir` in `src/lib/skill-dir.ts`, shared with sync's skill fingerprint).
+- A store skill is the whole `store/skills/<folder>/`, not just its SKILL.md. Every target installs the full folder, and a store install replaces the installed folder rather than copying over it. A skill's `storeHash` and, on targets with mismatch detection (Claude Code and OpenCode), the installed-side check both hash every file in the folder (`hashSkillDir` in `src/lib/skill-dir.ts`, shared with sync's skill fingerprint). A skill whose `name` isn't a single path segment is not indexed, since the name becomes the folder a reinstall deletes.
 
 Why:
 

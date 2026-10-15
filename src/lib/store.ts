@@ -7,7 +7,7 @@ import matter from "gray-matter";
 import { parse as parseJsonc } from "jsonc-parser";
 import { hashCanonicalJson, hashNormalizedText } from "./hash.js";
 import { toYaml } from "./agent-format.js";
-import { hashSkillDir } from "./skill-dir.js";
+import { hashSkillDir, isSafeSkillId } from "./skill-dir.js";
 import type {
   StoreIndex,
   StoreItemMeta,
@@ -179,6 +179,8 @@ function scanSkills(storePath: string, source?: ScanSourceMeta): StoreItemMeta[]
     const data = parsed.data as Partial<SkillFrontmatter>;
 
     if (!data.name || !data.description) continue;
+    // The name becomes the install folder, so one that isn't a single path segment could escape `skills/`.
+    if (!isSafeSkillId(data.name)) continue;
 
     const targetIds = parseTargetIds(data.targets);
 
@@ -328,7 +330,7 @@ function scanIncludes(storePath: string, source?: ScanSourceMeta): StoreItemMeta
  * indexed fields change meaning (e.g. how `storeHash` is computed), so stale
  * caches are rebuilt instead of trusted.
  */
-export const STORE_INDEX_VERSION = 4;
+export const STORE_INDEX_VERSION = 5;
 
 export function buildIndexFromStorePath(storePath: string, source?: ScanSourceMeta): StoreIndex {
   const items: StoreItemMeta[] = [

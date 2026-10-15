@@ -539,7 +539,7 @@ export default function StoreApp({ initialView, initialAppView = "manage", force
 
     let cancelled = false;
 
-    void enrichStoreViewMismatchForTargets(storeView, targetIds).then((nextView) => {
+    void enrichStoreViewMismatchForTargets(storeView).then((nextView) => {
       if (!cancelled && nextView !== storeView) {
         setStoreView(nextView);
       }

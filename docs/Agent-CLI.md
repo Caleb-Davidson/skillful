@@ -70,7 +70,7 @@ A matrix of four verbs over seven item types
 (`agent` `command` `skill` `provider` `mcp` `config` `include`):
 
 ```text
-list    <type>           # many   → buildStoreViewForTargets()[type]
+list    <type>           # many   → buildStoreViewForTargets()[type], mismatch-checked
 info    <type> <id>      # one, detailed (item + per-target state)
 install <type> <id>      # installItemForTarget() per eligible target
 remove  <type> <id>      # uninstallItemForTarget() per installed target
@@ -170,8 +170,10 @@ since the internal type nests a full `InstalledState` per target):
 }
 ```
 
-`list` and `info` compare every installed item with the store's copy (for a skill, every file in its
-folder), so `mismatch` and `status: "older-version"` report drift just as the TUI's `!` does.
+`list` and `info` compare each installed item with the store's copy (for a skill, every file in its
+folder) on targets with mismatch detection (Claude Code and OpenCode), so `mismatch` and
+`status: "older-version"` report drift just as the TUI's `!` does. Codex has none, so its items always
+report `mismatch: false`.
 
 **Source** (projection of `StoreSource`; drops internal head-tracking fields):
 
@@ -263,8 +265,9 @@ Each item command:
 2. Resolves the project context from `--project` or cwd (enforcing `NOT_A_PROJECT`).
 3. Loads the merged index via `loadMergedIndexFromConfiguredSources()` and the
    requested adapters via `initAdapters()`.
-4. For `list`: builds the view with `buildStoreViewForTargets()` and returns the
-   requested category. For `info`/`install`/`remove`: resolves the item by
+4. For `list`: builds the view with `buildStoreViewForTargets()`, checks it for drift with
+   `enrichStoreViewMismatchForTargets()`, and returns the requested category (`info` does the same
+   for its one item). For `info`/`install`/`remove`: resolves the item by
    `(type, id)`, erroring `ITEM_NOT_FOUND` if absent.
 5. Performs the action (or, under `--dry-run`, computes eligibility only) and prints
    the envelope.

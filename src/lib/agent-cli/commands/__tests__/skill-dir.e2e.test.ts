@@ -125,6 +125,10 @@ test("e2e: a skill installs, drifts, and reinstalls as its whole directory (clau
     drifted.state.perTarget.map((p) => [p.targetId, p.mismatch]),
     [["claude-code", true]]
   );
+  const listed = runCli(["list", "skills", ...proj], tmpHome);
+  assert.equal(listed.env.ok, true, `list; stdout: ${listed.stdout}`);
+  const listedItem = (listed.env.data as { items: Array<InfoItem & { id: string }> }).items.find((i) => i.id === SKILL_ID);
+  assert.equal(listedItem?.state.status, "older-version", "list reports the drift too");
 
   // store commit: delete one supporting file, edit another
   const editedFinder = "Find candidates, then rank them.\n";
@@ -175,4 +179,42 @@ test("e2e: an OpenCode skill install copies the whole directory (offline)", { ti
 
   fs.writeFileSync(path.join(installedDir, "finder.md"), "Locally edited.\n", "utf-8");
   assert.equal(infoSkill(proj, tmpHome).state.status, "older-version", "an edited supporting file is an older version");
+});
+
+test("e2e: an index cached by an older release is rebuilt, and an unsafe skill name is not indexed (offline)", { timeout: 120000 }, async (t) => {
+  if (!gitAvailable()) {
+    t.skip("git is not available in this environment");
+    return;
+  }
+
+  const { repo } = makeStoreRepo();
+  // A skill whose name would resolve its install folder to the parent of `skills/`.
+  const escapeDir = path.join(repo, "store", "skills", "escape");
+  fs.mkdirSync(escapeDir, { recursive: true });
+  fs.writeFileSync(path.join(escapeDir, "SKILL.md"), "---\nname: ..\ndescription: Escapes skills/.\n---\n\nBody.\n", "utf-8");
+  gitIn(repo, ["add", "-A"]);
+  gitIn(repo, ["commit", "-q", "-m", "add escape"]);
+
+  const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), "skillful-skilldir-home3-"));
+  const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), "skillful-skilldir-proj3-"));
+  const proj = ["--scope", "project", "--project", projectDir, "--target", "claude-code"];
+
+  const added = runCli(["add", "source", repo, "--id", SOURCE_ID], tmpHome);
+  assert.equal(added.env.ok, true, `add source; stdout: ${added.stdout}`);
+
+  // Age the cached index: an older shape version and a hash computed the old way. The source head is unchanged,
+  // so only the version mismatch can trigger the rebuild.
+  const indexPath = path.join(tmpHome, ".cache", "skillful", "sources", SOURCE_ID, "index.json");
+  const index = JSON.parse(fs.readFileSync(indexPath, "utf-8")) as { version: number; items: Array<{ id: string; storeHash?: string }> };
+  const realHash = index.items.find((i) => i.id === SKILL_ID)?.storeHash;
+  index.version = 3;
+  for (const item of index.items) if (item.id === SKILL_ID) item.storeHash = "stale";
+  fs.writeFileSync(indexPath, JSON.stringify(index), "utf-8");
+
+  assert.equal(infoSkill(proj, tmpHome).storeHash, realHash, "the stale index was rebuilt");
+
+  const listed = runCli(["list", "skills", ...proj], tmpHome);
+  assert.equal(listed.env.ok, true, `list; stdout: ${listed.stdout}`);
+  const ids = (listed.env.data as { items: Array<{ id: string }> }).items.map((i) => i.id);
+  assert.deepEqual(ids, [SKILL_ID], "the skill named '..' is not indexed");
 });

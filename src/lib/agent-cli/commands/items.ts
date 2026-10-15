@@ -134,7 +134,7 @@ function buildSkipped(
 /** Build the store view for the matching items and compare each installed one against the store. */
 async function buildCheckedView(resolved: ResolvedContext, match: (item: StoreItemMeta) => boolean): Promise<StoreView> {
   const view = buildStoreViewForTargets(resolved.items.filter(match), resolved.targets, resolved.projectCtx);
-  return enrichStoreViewMismatchForTargets(view, resolved.targets);
+  return enrichStoreViewMismatchForTargets(view);
 }
 
 // ── list <plural> ──
