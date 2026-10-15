@@ -11,6 +11,7 @@ import { parse as parseJsonc, modify, applyEdits } from "jsonc-parser";
 import type { StoreItemMeta, InstalledState, ProjectContext } from "../types.js";
 import { resolveStoreItemPath, normalizeCommandForHash } from "../store.js";
 import { hashCanonicalJson, hashNormalizedText } from "../hash.js";
+import { hashSkillDir, replaceSkillDir } from "../skill-dir.js";
 
 const FORMAT_OPTS = { formattingOptions: { insertSpaces: true, tabSize: 2 } };
 
@@ -340,6 +341,10 @@ export async function getMismatchState(
     }
 
     try {
+      if (item.type === "skill") {
+        const installedHash = hashSkillDir(path.dirname(filePath));
+        return { mismatch: installedHash !== item.storeHash, mismatchChecked: true };
+      }
       const raw = await fs.promises.readFile(filePath, "utf-8");
       const normalized = item.type === "command" ? normalizeCommandForHash(raw) : raw;
       const installedHash = hashNormalizedText(normalized);
@@ -398,9 +403,12 @@ function installItemGlobal(item: StoreItemMeta, srcPath: string): string {
     fs.writeFileSync(destPath, normalizeCommandForHash(raw), "utf-8");
     return destPath;
   } else if (item.type === "skill") {
+    const srcDir = path.dirname(srcPath);
+    if (!fs.existsSync(path.join(srcDir, "SKILL.md"))) {
+      throw new Error(`Skill '${item.id}' is missing SKILL.md and cannot be installed.`);
+    }
     const destDir = path.join(getGlobalConfigDir(), "skills", item.id);
-    fs.mkdirSync(destDir, { recursive: true });
-    fs.copyFileSync(srcPath, path.join(destDir, "SKILL.md"));
+    replaceSkillDir(srcDir, destDir);
     return destDir;
   } else if (item.type === "provider") {
     const payload = readStoreJsonPayload(item);
@@ -435,9 +443,12 @@ function installItemProject(item: StoreItemMeta, ctx: ProjectContext, srcPath: s
     fs.writeFileSync(destPath, normalizeCommandForHash(raw), "utf-8");
     return destPath;
   } else if (item.type === "skill") {
+    const srcDir = path.dirname(srcPath);
+    if (!fs.existsSync(path.join(srcDir, "SKILL.md"))) {
+      throw new Error(`Skill '${item.id}' is missing SKILL.md and cannot be installed.`);
+    }
     const destDir = path.join(dotDir, "skills", item.id);
-    fs.mkdirSync(destDir, { recursive: true });
-    fs.copyFileSync(srcPath, path.join(destDir, "SKILL.md"));
+    replaceSkillDir(srcDir, destDir);
     return destDir;
   } else if (item.type === "provider") {
     const payload = readStoreJsonPayload(item);

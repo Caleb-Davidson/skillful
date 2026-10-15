@@ -6,11 +6,11 @@
  * deletion/rename propagation. See docs/Sync.md.
  */
 import fs from "node:fs";
-import path from "node:path";
 import crypto from "node:crypto";
 import type { ProjectContext, StoreItemMeta, TargetId } from "./types.js";
 import type { TargetAdapter, SyncCategory } from "./targets/shared.js";
 import { convertAgent, parseAgent, type AgentFormat } from "./agent-format.js";
+import { hashSkillDir } from "./skill-dir.js";
 
 const SYNC_CATEGORIES: SyncCategory[] = ["agent", "command", "skill"];
 
@@ -71,24 +71,6 @@ function fingerprintAgent(filePath: string, format: AgentFormat): string {
     body: parsed.body.replace(/\r\n/g, "\n").trim(),
   };
   return hash(JSON.stringify(normalized));
-}
-
-function fingerprintSkillDir(dirPath: string): string {
-  const entries: { rel: string; content: string }[] = [];
-  function walk(currentDir: string, prefix: string): void {
-    for (const item of fs.readdirSync(currentDir, { withFileTypes: true })) {
-      const full = path.join(currentDir, item.name);
-      const rel = prefix === "" ? item.name : `${prefix}/${item.name}`;
-      if (item.isDirectory()) {
-        walk(full, rel);
-      } else if (item.isFile()) {
-        entries.push({ rel, content: fs.readFileSync(full, "utf-8").replace(/\r\n/g, "\n") });
-      }
-    }
-  }
-  walk(dirPath, "");
-  entries.sort((a, b) => a.rel.localeCompare(b.rel));
-  return hash(JSON.stringify(entries));
 }
 
 function sortKeys(obj: unknown): unknown {
@@ -220,7 +202,7 @@ export function buildSyncPlan(
 }
 
 function computeFingerprint(category: SyncCategory, artifactPath: string, format?: AgentFormat): string {
-  if (category === "skill") return fingerprintSkillDir(artifactPath);
+  if (category === "skill") return hashSkillDir(artifactPath);
   if (category === "agent") return fingerprintAgent(artifactPath, format ?? "md");
   return fingerprintCommand(artifactPath);
 }

@@ -36,6 +36,7 @@ src/
     source-sync.ts           # clone/fetch/check/index for git sources
     sources.ts               # source registry persistence and helpers
     store.ts                 # scan store directories + merge by priority
+    skill-dir.ts             # hash and install a skill's whole directory
     target-manager.ts        # adapter selection, multi-target rollup, install fan-out
     project-targets.ts       # loads project-local skillful.targets.json
     agent-format.ts          # MD ↔ TOML agent conversion (used by sync)

@@ -162,13 +162,13 @@ Source changes refresh in-memory store content immediately (no restart needed).
 Global mode (outside a project):
 
 - agents/commands -> `~/.config/opencode/agents|commands`
-- skills -> `~/.config/opencode/skills/<name>/SKILL.md`
+- skills -> `~/.config/opencode/skills/<name>/` (the whole skill folder)
 - providers/mcps -> merged into `~/.config/opencode/opencode.json`
 
 Project mode (inside a project with `.git` or `.opencode`):
 
 - agents/commands -> `.opencode/agents|commands`
-- skills -> `.opencode/skills/<name>/SKILL.md`
+- skills -> `.opencode/skills/<name>/` (the whole skill folder)
 - providers/mcps -> merged into `./opencode.json`
 
 In project mode, operations affect project scope only and do not mutate global installs.
@@ -232,6 +232,8 @@ targets: codex
 
 Skill content.
 ```
+
+A skill is its whole folder: everything under `store/skills/<folder>/` installs with it, so SKILL.md can reference supporting files beside it (on Claude Code, through `${CLAUDE_SKILL_DIR}`). A reinstall replaces the installed folder, so a file deleted from the store is deleted on install too. On targets with mismatch detection (Claude Code and OpenCode), it covers every file in the folder, so editing only a supporting file shows `!`.
 
 `targets` is optional for agents, commands, and skills. When present, the item is only shown for the listed targets (`opencode`, `claude-code`, `codex`).
 

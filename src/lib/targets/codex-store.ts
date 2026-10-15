@@ -4,6 +4,7 @@ import path from "node:path";
 import { parse as parseJsonc } from "jsonc-parser";
 import type { InstalledState, ProjectContext, StoreItemMeta } from "../types.js";
 import { resolveStoreItemPath } from "../store.js";
+import { replaceSkillDir } from "../skill-dir.js";
 
 const CODEX_DIR = path.join(os.homedir(), ".codex");
 const CODEX_CONFIG_PATH = path.join(CODEX_DIR, "config.toml");
@@ -92,11 +93,6 @@ function upsertTomlSection(raw: string, section: string, id: string, payload: Re
   const block = `${lines.join("\n")}\n`;
   if (!withoutSection.trim()) return block;
   return `${withoutSection}\n\n${block}`;
-}
-
-function copyDirectoryRecursive(srcDir: string, destDir: string): void {
-  fs.mkdirSync(destDir, { recursive: true });
-  fs.cpSync(srcDir, destDir, { recursive: true });
 }
 
 function readStoreJsonPayload(item: StoreItemMeta): Record<string, unknown> {
@@ -227,7 +223,7 @@ export function installItem(item: StoreItemMeta, ctx?: ProjectContext): string {
     if (!fs.existsSync(path.join(srcDir, "SKILL.md"))) {
       throw new Error(`Skill '${item.id}' is missing SKILL.md and cannot be installed.`);
     }
-    copyDirectoryRecursive(srcDir, destDir);
+    replaceSkillDir(srcDir, destDir);
     return destDir;
   }
 

@@ -16,6 +16,7 @@ import { parse as parseJsonc, modify, applyEdits } from "jsonc-parser";
 import type { InstalledState, ProjectContext, StoreItemMeta } from "../types.js";
 import { resolveStoreItemPath, normalizeCommandForHash } from "../store.js";
 import { hashCanonicalJson, hashNormalizedText } from "../hash.js";
+import { hashSkillDir, replaceSkillDir } from "../skill-dir.js";
 import { CLAUDE_MD_REDIRECT_CONTENT, CLAUDE_MD_REDIRECT_ID } from "../builtins.js";
 
 const FORMAT_OPTS = { formattingOptions: { insertSpaces: true, tabSize: 2 } };
@@ -407,6 +408,10 @@ export async function getMismatchState(
       return { mismatch: false, mismatchChecked: true };
     }
     try {
+      if (item.type === "skill") {
+        const installedHash = hashSkillDir(path.dirname(filePath));
+        return { mismatch: installedHash !== item.storeHash, mismatchChecked: true };
+      }
       const raw = await fs.promises.readFile(filePath, "utf-8");
       const normalized = item.type === "command" ? normalizeCommandForHash(raw) : raw;
       const installedHash = hashNormalizedText(normalized);
@@ -514,8 +519,7 @@ function installItemGlobal(item: StoreItemMeta, srcPath: string): string {
       throw new Error(`Skill '${item.id}' is missing SKILL.md and cannot be installed.`);
     }
     const destDir = path.join(baseDir, "skills", item.id);
-    fs.mkdirSync(destDir, { recursive: true });
-    fs.cpSync(srcDir, destDir, { recursive: true });
+    replaceSkillDir(srcDir, destDir);
     return destDir;
   }
 
@@ -567,8 +571,7 @@ function installItemProject(item: StoreItemMeta, ctx: ProjectContext, srcPath: s
       throw new Error(`Skill '${item.id}' is missing SKILL.md and cannot be installed.`);
     }
     const destDir = path.join(baseDir, "skills", item.id);
-    fs.mkdirSync(destDir, { recursive: true });
-    fs.cpSync(srcDir, destDir, { recursive: true });
+    replaceSkillDir(srcDir, destDir);
     return destDir;
   }
 
